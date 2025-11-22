@@ -1,0 +1,7 @@
+#grid-container{display:grid;grid-template-columns:repeat(20,18px);gap:2px;margin:14px auto;max-width:420px}
+.square{width:18px;height:18px;background:#071126;border-radius:2px}
+.square.wall{background:#1a2333}
+.square.dot{background:#ffd54f}
+.square.pac-man{background:#ffd54f;border-radius:50%}
+.square.ghost{background:#ff5252;border-radius:50%}
+button{padding:8px 12px;border-radius:6px;background:#0ea5a8;border:none;color:#021;cursor:pointer}
