@@ -1,73 +1,48 @@
-window.SOMNIA_CONFIG = {
-  "rpc": "https://dream-rpc.somnia.network",
-  "chainIdHex": "0xc488",      // 50312 decimal
-  "chainIdDec": 50312,
-  "pacmanContract": {
-    "address": "0xDb706daF3C2e5B657d02f69841b4323958507de7",
-    "abi": [
-      {
-        "inputs": [],
-        "stateMutability": "nonpayable",
-        "type": "constructor"
-      },
-      {
-        "inputs": [
-          { "internalType": "uint256", "name": "score", "type": "uint256" }
-        ],
-        "name": "submitScore",
-        "outputs": [],
-        "stateMutability": "nonpayable",
-        "type": "function"
-      },
-      {
-        "inputs": [],
-        "name": "claimReward",
-        "outputs": [],
-        "stateMutability": "nonpayable",
-        "type": "function"
-      },
-      {
-        "inputs": [],
-        "name": "getLeaderboard",
-        "outputs": [
-          { "internalType": "address[10]", "name": "", "type": "address[10]" },
-          { "internalType": "uint256[10]", "name": "", "type": "uint256[10]" }
-        ],
-        "stateMutability": "view",
-        "type": "function"
-      },
-      {
-        "inputs": [{ "internalType": "address", "name": "", "type": "address" }],
-        "name": "bestScore",
-        "outputs": [
-          { "internalType": "uint256", "name": "", "type": "uint256" }
-        ],
-        "stateMutability": "view",
-        "type": "function"
-      },
-      {
-        "inputs": [{ "internalType": "address", "name": "owner", "type": "address" }],
-        "name": "balanceOf",
-        "outputs": [
-          { "internalType": "uint256", "name": "", "type": "uint256" }
-        ],
-        "stateMutability": "view",
-        "type": "function"
-      },
-      {
-        "inputs": [],
-        "name": "name",
-        "outputs": [{ "internalType": "string", "name": "", "type": "string" }],
-        "stateMutability": "view",
-        "type": "function"
-      },
-      {
-        "inputs": [],
-        "name": "symbol",
-        "outputs": [{ "internalType": "string", "name": "", "type": "string" }],
-        "stateMutability": "view",
-        "type": "function"
-      }
-    ]
+// config.js — Somnia Testnet Final Config
+
+console.log("config.js loaded — Somnia Testnet active");
+
+// ============ CHAIN CONFIG ============
+
+window.SOMNIA = {
+  rpc: "https://dream-rpc.somnia.network",
+  chainIdDec: 50312,
+  chainIdHex: "0xC488",
+  symbol: "STT",
+  chainName: "Somnia Testnet",
+  currency: {
+    name: "Somnia Token",
+    symbol: "STT",
+    decimals: 18
+  }
+};
+
+
+// ============ BACKEND / API PLACEHOLDER ============
+// Jika nanti mau tambah endpoint backend, tambahkan di sini.
+
+window.API_ENDPOINTS = {
+  missions: "local_mock_missions.json", // bisa diganti API real
+  leaderboard: "local_mock_leaderboard.json"
+};
+
+
+// ============ PACMAN GAME CONFIG ============
+
+window.PACMAN_CONFIG = {
+  sendScoreToParent: true,
+  // safety origin mode, iframe → parent
+  allowedOrigin: "*"
+};
+
+
+// ============ TX CONFIG ============
+
+window.TX = {
+  gasLimit: 180000,
+  scoreContract: {
+    // isi jika sudah deploy kontrak penyimpan score onchain
+    address: null,
+    abi: []
   }
 };
