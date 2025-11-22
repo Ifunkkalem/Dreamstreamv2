@@ -1,0 +1,26 @@
+<!doctype html>
+<html>
+<head><meta charset="utf-8"/><meta name="viewport" content="width=device-width,initial-scale=1"/></head>
+<body>
+  <h2>Pacman — Onchain</h2>
+  <div>
+    <button id="btnConnect">Connect MetaMask</button>
+    <div id="addr">Not connected</div>
+  </div>
+
+  <div id="grid-container"></div>
+  <div>Score: <span id="score">0</span></div>
+  <button id="start-button">Start</button>
+  <div>
+    <button id="btnSubmitScore">Submit Score On-Chain</button>
+    <button id="btnClaimReward">Claim Reward</button>
+    <div id="txStatus"></div>
+  </div>
+
+  <link rel="stylesheet" href="pacman.css" />
+  <script src="https://cdn.jsdelivr.net/npm/ethers@5.7.2/dist/ethers.umd.min.js"></script>
+  <script src="config.js"></script>
+  <script src="web3.js"></script>
+  <script src="pacman_onchain.js"></script>
+</body>
+</html>
