@@ -1,40 +1,37 @@
-async function addOrSwitchSomnia() {
-  if (!window.ethereum)
-    throw new Error('MetaMask not found');
+// somnia_chain.js — FINAL Somnia Testnet Config (Official RPC)
 
-  const chain = {
-    chainId: "0xc488", // HEX dari 50312
-    chainName: "Somnia Testnet",
-    rpcUrls: ["https://dream-rpc.somnia.network"],
-    nativeCurrency: {
-      name: "Somnia Test Token",
-      symbol: "STT",
-      decimals: 18
-    },
-    blockExplorerUrls: ["https://explorer-testnet.somnia.network"]
-  };
+console.log("Somnia chain config loaded");
 
-  try {
-    // Switch chain kalau sudah ada
-    await window.ethereum.request({
-      method: "wallet_switchEthereumChain",
-      params: [{ chainId: chain.chainId }]
-    });
-    return { switched: true };
-
-  } catch (err) {
-
-    // Chain belum ditambahkan
-    if (err.code === 4902 || err.message.includes("Unrecognized")) {
-      await window.ethereum.request({
-        method: "wallet_addEthereumChain",
-        params: [chain]
-      });
-      return { added: true };
-    }
-
-    throw err;
+// ===============================
+//   CHAIN CONFIG
+// ===============================
+window.SOMNIA = {
+  rpc: "https://dream-rpc.somnia.network",
+  chainId: 50312,
+  chainIdHex: "0xC4B8", // 50312 in hex
+  chainName: "Somnia Testnet",
+  currency: {
+    name: "Somnia Test Token",
+    symbol: "STT",
+    decimals: 18
   }
-}
+};
 
-window.addOrSwitchSomnia = addOrSwitchSomnia;
+
+// ===============================
+//   TX DEFAULTS
+// ===============================
+window.TX = {
+  gasLimit: "22000"
+};
+
+
+// ===============================
+//   LOG
+// ===============================
+console.log(`
+=== SOMNIA TESTNET ACTIVE ===
+RPC     : ${window.SOMNIA.rpc}
+CHAIN   : ${window.SOMNIA.chainId} (${window.SOMNIA.chainIdHex})
+TOKEN   : STT
+`);
