@@ -1,48 +1,38 @@
-// config.js — Somnia Testnet Final Config
+// config.js — Somnia Testnet Official Configuration (FINAL)
 
-console.log("config.js loaded — Somnia Testnet active");
+// RPC resmi
+window.SOMNIA_RPC = "https://dream-rpc.somnia.network";
 
-// ============ CHAIN CONFIG ============
-
-window.SOMNIA = {
-  rpc: "https://dream-rpc.somnia.network",
-  chainIdDec: 50312,
-  chainIdHex: "0xC488",
-  symbol: "STT",
-  chainName: "Somnia Testnet",
-  currency: {
-    name: "Somnia Token",
-    symbol: "STT",
-    decimals: 18
-  }
+// Chain detail resmi Somnia Testnet
+window.SOMNIA_CHAIN = {
+    chainId: "0xC488", // 50312 (hex)
+    chainName: "Somnia Testnet",
+    nativeCurrency: {
+        name: "Somnia Test Token",
+        symbol: "STT",
+        decimals: 18
+    },
+    rpcUrls: ["https://dream-rpc.somnia.network"],
+    blockExplorerUrls: ["https://testnet.somnia.network/"]
 };
 
-
-// ============ BACKEND / API PLACEHOLDER ============
-// Jika nanti mau tambah endpoint backend, tambahkan di sini.
-
-window.API_ENDPOINTS = {
-  missions: "local_mock_missions.json", // bisa diganti API real
-  leaderboard: "local_mock_leaderboard.json"
-};
-
-
-// ============ PACMAN GAME CONFIG ============
-
-window.PACMAN_CONFIG = {
-  sendScoreToParent: true,
-  // safety origin mode, iframe → parent
-  allowedOrigin: "*"
-};
-
-
-// ============ TX CONFIG ============
-
-window.TX = {
-  gasLimit: 180000,
-  scoreContract: {
-    // isi jika sudah deploy kontrak penyimpan score onchain
-    address: null,
-    abi: []
-  }
+// Smart contract scoring (contoh token/logic kamu)
+window.SOMNIA_CONTRACT = {
+    address: "0xDb706daF3C2e5B657d02f69841b4323958507de7", // Replace if needed
+    abi: [
+        {
+            "inputs": [],
+            "name": "submitScore",
+            "outputs": [],
+            "stateMutability": "payable",
+            "type": "function"
+        },
+        {
+            "inputs": [{"internalType":"address","name":"user","type":"address"}],
+            "name": "getScore",
+            "outputs": [{"internalType":"uint256","name":"","type":"uint256"}],
+            "stateMutability": "view",
+            "type": "function"
+        }
+    ]
 };
