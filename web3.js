@@ -1,135 +1,86 @@
-// web3.js — FINAL Somnia Testnet Web3 Engine
+// web3.js — FINAL Somnia Web3 Utility Layer (Competition Edition)
 
-console.log("web3.js loaded — Somnia Testnet");
+window.Web3Somnia = {
+    provider: null,
+    signer: null,
+    address: null,
+    contract: null,
 
-// Global state
-window.currentAccount = null;
-window.provider = null;
-window.signer = null;
+    // Initialize provider safely
+    init() {
+        if (typeof window.ethereum === "undefined") {
+            console.warn("MetaMask not found");
+            return false;
+        }
 
+        this.provider = new ethers.providers.Web3Provider(window.ethereum);
+        return true;
+    },
 
-// ==========================================
-//  CONNECT METAMASK
-// ==========================================
-async function connectMetaMask() {
-  try {
-    if (!window.ethereum) {
-      alert("MetaMask is not installed!");
-      return;
+    // Connect wallet
+    async connect() {
+        try {
+            if (!this.init()) return null;
+
+            const accounts = await window.ethereum.request({
+                method: "eth_requestAccounts"
+            });
+
+            this.address = accounts[0];
+            this.signer = this.provider.getSigner();
+
+            return this.address;
+
+        } catch (e) {
+            console.error("Wallet Connect Error:", e);
+            return null;
+        }
+    },
+
+    // Load smart contract instance (from config.js)
+    loadContract() {
+        if (!window.SOMNIA_CONTRACT) return null;
+
+        this.contract = new ethers.Contract(
+            window.SOMNIA_CONTRACT.address,
+            window.SOMNIA_CONTRACT.abi,
+            this.signer
+        );
+
+        return this.contract;
+    },
+
+    // Read only
+    async readScore(address) {
+        try {
+            if (!this.contract) this.loadContract();
+            return await this.contract.getScore(address);
+        } catch (e) {
+            console.error("Read Error:", e);
+            return 0;
+        }
+    },
+
+    // Write score
+    async submitScore(score) {
+        try {
+            if (!this.signer) await this.connect();
+            if (!this.contract) this.loadContract();
+
+            const tx = await this.contract.submitScore({
+                value: 0
+            });
+
+            return tx;
+
+        } catch (err) {
+            console.error("TX error:", err);
+            return null;
+        }
     }
-
-    window.provider = new ethers.providers.Web3Provider(window.ethereum, "any");
-
-    const accounts = await window.ethereum.request({
-      method: "eth_requestAccounts"
-    });
-
-    window.currentAccount = accounts[0];
-    window.signer = provider.getSigner();
-
-    document.getElementById("addr").innerHTML = shorten(wallet());
-
-    await switchToSomnia();
-
-    return accounts[0];
-  } catch (err) {
-    console.error("Connect error:", err);
-    alert("Failed to connect MetaMask.");
-  }
-}
-
-
-// ==========================================
-//  SWITCH TO SOMNIA TESTNET
-// ==========================================
-async function switchToSomnia() {
-  try {
-    await window.ethereum.request({
-      method: "wallet_switchEthereumChain",
-      params: [{ chainId: window.SOMNIA.chainIdHex }]
-    });
-  } catch (switchError) {
-    // Chain not added — add it
-    if (switchError.code === 4902) {
-      await window.ethereum.request({
-        method: "wallet_addEthereumChain",
-        params: [
-          {
-            chainId: window.SOMNIA.chainIdHex,
-            chainName: window.SOMNIA.chainName,
-            nativeCurrency: window.SOMNIA.currency,
-            rpcUrls: [window.SOMNIA.rpc],
-            blockExplorerUrls: ["https://explorer.somnia.network"]
-          }
-        ]
-      });
-    } else {
-      console.error("Switch error:", switchError);
-    }
-  }
-}
-
-
-// ==========================================
-//  SEND ON-CHAIN TX (STT Native Transfer)
-// ==========================================
-async function sendSTT(to, amount) {
-  if (!window.signer) {
-    alert("Wallet not connected.");
-    return;
-  }
-
-  try {
-    const tx = {
-      to: to,
-      value: ethers.utils.parseEther(amount),
-      gasLimit: window.TX.gasLimit
-    };
-
-    const response = await window.signer.sendTransaction(tx);
-
-    return response;
-  } catch (err) {
-    console.error("TX ERROR:", err);
-    throw err;
-  }
-}
-
-
-// ==========================================
-//  PACMAN: SUBMIT SCORE
-// ==========================================
-window.submitScoreOnchain = async (score) => {
-  if (!window.currentAccount) {
-    alert("Connect MetaMask first.");
-    return;
-  }
-
-  document.getElementById("txStatus").innerHTML = "Submitting...";
-
-  try {
-    let tx = await sendSTT(window.currentAccount, "0.00001");
-    document.getElementById("txStatus").innerHTML =
-      "TX Sent: " + tx.hash.slice(0, 10) + "...";
-  } catch (err) {
-    document.getElementById("txStatus").innerHTML = "TX Failed.";
-  }
 };
 
-
-// ==========================================
-//  HELPERS
-// ==========================================
-function wallet() {
-  return window.currentAccount;
-}
-
-function shorten(addr) {
-  if (!addr) return "Not Connected";
-  return addr.slice(0, 6) + "..." + addr.slice(-4);
-}
-
-
-// Expose globally
-window.connectMetaMask = connectMetaMask;
-window.sendSTT = sendSTT;
+// GLOBAL bridge for Pac-Man iframe
+window.submitScoreOnchain = async (score) => {
+    return await window.Web3Somnia.submitScore(score);
+};
