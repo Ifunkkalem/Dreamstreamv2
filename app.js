@@ -1,217 +1,153 @@
-// app.js — Somnia Competition Edition
-// Parent window controller for iframe, wallet, on-chain TX, SDS mock/real,   
-// and secure postMessage bridge for pacman_hybrid.js.
+// app.js — Final Somnia Competition Edition
+// Fully integrated with: SomniaStreamAdapter + Web3Somnia + Pac-Man hybrid.
 
-console.log("DreamStream PRO+ — Competition Edition Loaded");
-
-// ======== DOM ========
-const btnConnect = document.getElementById("btn-metamask");
+// DOM elements
+const btnMeta = document.getElementById("btn-metamask");
 const btnAddSomnia = document.getElementById("btn-add-somnia");
+const btnTrack = document.getElementById("btn-connect");
 const walletInput = document.getElementById("wallet-input");
+const liveIndicator = document.getElementById("live-indicator");
+const activityFeed = document.getElementById("activity");
 const pointsEl = document.getElementById("points");
-const streamStatusEl = document.getElementById("stream-status");
-const activityEl = document.getElementById("activity");
+const missionsEl = document.getElementById("missions");
 const leaderboardEl = document.getElementById("leaderboard");
+const walletListEl = document.getElementById("wallet-list");
+const toggleSim = document.getElementById("toggle-sim");
 
-const pacIframe = document.getElementById("pacman-iframe");
+let trackedWallet = null;
+let stream = null;
+let pointsHistory = [];
+let chart = null;
 
-// ======== SOMNIA CONFIG ========
-const SOMNIA = {
-  chainIdHex: "0xC488",       // 50312
-  chainId: 50312,
-  rpc: "https://dream-rpc.somnia.network",
-  symbol: "STT",
-  name: "Somnia Testnet",
-};
-
-// ======== INTERNAL STATE ========
-let provider = null;
-let signer = null;
-let currentAddress = null;
-let trackedPoints = 0;
-
-// Smart contract (example)
-const SCORE_CONTRACT = {
-  address: "0xDb706daF3C2e5B657d02f69841b4323958507de7", // kamu beri
-  abi: [
-    "function submitScore(uint256 score) public returns (bool)",
-  ],
-};
-
-
-// ================================
-// WALLET CONNECTION
-// ================================
-
-async function connectWallet() {
-  if (!window.ethereum) {
-    toast("MetaMask tidak ditemukan", "error");
-    return;
-  }
-
-  provider = new ethers.providers.Web3Provider(window.ethereum);
-
-  try {
-    await provider.send("eth_requestAccounts", []);
-    signer = provider.getSigner();
-    currentAddress = await signer.getAddress();
-
-    walletInput.value = currentAddress;
-
-    activity("Wallet connected: " + currentAddress);
-    streamStatus("CONNECTED", true);
-
-    pacIframe.contentWindow.postMessage(
-      { type: "CONNECT_RESULT", success: true, address: currentAddress },
-      "*"
-    );
-
-  } catch (err) {
-    console.error(err);
-    pacIframe.contentWindow.postMessage(
-      { type: "CONNECT_RESULT", success: false },
-      "*"
-    );
-  }
+// ------------------------------
+// ACTIVITY LOG
+// ------------------------------
+function log(msg) {
+  const d = document.createElement("div");
+  d.textContent = `[${new Date().toLocaleTimeString()}] ${msg}`;
+  activityFeed.prepend(d);
 }
 
-btnConnect.onclick = connectWallet;
+// ------------------------------
+// CHART SETUP
+// ------------------------------
+function initChart() {
+  const ctx = document.getElementById("pointsChart").getContext("2d");
 
-
-// ================================
-// ADD / SWITCH SOMNIA TESTNET
-// ================================
-
-btnAddSomnia.onclick = async () => {
-  if (!window.ethereum) return toast("MetaMask tidak ada", "error");
-
-  try {
-    await window.ethereum.request({
-      method: "wallet_switchEthereumChain",
-      params: [{ chainId: SOMNIA.chainIdHex }],
-    });
-  } catch (e) {
-    if (e.code === 4902) {
-      await window.ethereum.request({
-        method: "wallet_addEthereumChain",
-        params: [{
-          chainId: SOMNIA.chainIdHex,
-          chainName: SOMNIA.name,
-          rpcUrls: [SOMNIA.rpc],
-          nativeCurrency: { name: "STT", symbol: "STT", decimals: 18 }
-        }]
-      });
-    }
-  }
-
-  toast("Somnia Testnet active", "success");
-};
-
-
-// ================================
-// ON-CHAIN TX — SUBMIT SCORE
-// ================================
-
-async function submitScore(score) {
-  if (!signer) {
-    toast("Wallet belum connect", "error");
-    return sendTxResult(false, "Wallet not connected");
-  }
-
-  try {
-    const contract = new ethers.Contract(
-      SCORE_CONTRACT.address,
-      SCORE_CONTRACT.abi,
-      signer
-    );
-
-    const tx = await contract.submitScore(score);
-    activity("TX submitted: " + tx.hash);
-
-    const receipt = await tx.wait();
-    activity("TX confirmed!");
-
-    sendTxResult(true, tx.hash);
-
-  } catch (e) {
-    console.error(e);
-    sendTxResult(false, e.message || "TX failed");
-  }
-}
-
-function sendTxResult(success, payload) {
-  pacIframe.contentWindow.postMessage(
-    {
-      type: "SOMNIA_ONCHAIN_SUBMIT_RESULT",
-      success,
-      txHash: success ? payload : null,
-      error: success ? null : payload,
+  chart = new Chart(ctx, {
+    type: "line",
+    data: {
+      labels: [],
+      datasets: [
+        {
+          label: "Points",
+          data: [],
+          borderColor: "#00e8c6",
+          backgroundColor: "rgba(0,232,198,0.1)",
+          tension: 0.3
+        }
+      ]
     },
-    "*"
-  );
+    options: {
+      scales: { x: { display: false } }
+    }
+  });
 }
 
+function updateChart(value) {
+  pointsHistory.push(value);
+  if (pointsHistory.length > 50) pointsHistory.shift();
 
-// ================================
-// ACTIVITY + STATUS UI
-// ================================
-
-function activity(msg) {
-  const t = document.createElement("div");
-  t.textContent = "[log] " + msg;
-  activityEl.prepend(t);
+  chart.data.labels = pointsHistory.map((_, i) => i + 1);
+  chart.data.datasets[0].data = pointsHistory;
+  chart.update();
 }
 
-function streamStatus(msg, ok = false) {
-  streamStatusEl.textContent = msg;
-  streamStatusEl.className = ok ? "ok" : "muted";
+// ------------------------------
+// STREAM HANDLING
+// ------------------------------
+function startStream(wallet) {
+  if (stream) stream.disconnect();
+
+  stream = new SomniaStreamAdapter({
+    wallet,
+    useMock: toggleSim.checked,
+    onPoints: (w, p) => {
+      pointsEl.textContent = p;
+      updateChart(p);
+      log(`Points update: ${p} (${w})`);
+    },
+    onEvent: (msg) => {
+      log(msg);
+      liveIndicator.textContent = "ONLINE";
+      liveIndicator.className = "indicator online";
+    },
+    onMission: (w, mission) => {
+      const li = document.createElement("li");
+      li.textContent = `${mission.name} — ${mission.time}`;
+      missionsEl.prepend(li);
+    }
+  });
+
+  stream.connect();
+  log("Stream started");
 }
 
-function toast(msg) {
-  console.log("[toast]", msg);
-}
+// ------------------------------
+// WALLET CONNECT
+// ------------------------------
+btnMeta.onclick = async () => {
+  const addr = await Somnia.connectWallet();
+  if (!addr) return alert("Failed to connect wallet");
 
+  walletInput.value = addr;
+  log("Wallet connected: " + addr);
+};
 
-// ================================
-// PACMAN IFRAME — MESSAGE HANDLER
-// ================================
+// add + switch chain
+btnAddSomnia.onclick = async () => {
+  const ok = await Somnia.switchSomnia();
+  if (ok) log("Switched to Somnia Testnet (STT)");
+};
 
-window.addEventListener("message", (ev) => {
-  const d = ev.data;
-  if (!d || !d.type) return;
+// track wallet
+btnTrack.onclick = () => {
+  const w = walletInput.value.trim();
+  if (!w) return alert("Enter wallet address");
 
-  // 1 — Game wants wallet connect
-  if (d.type === "REQUEST_CONNECT") {
-    connectWallet();
+  trackedWallet = w;
+  startStream(w);
+};
+
+// ------------------------------
+// PAC-MAN MESSAGE BRIDGE
+// ------------------------------
+window.addEventListener("message", async (ev) => {
+  if (!ev.data) return;
+
+  // hybrid point event
+  if (ev.data.type === "SOMNIA_POINT_EVENT") {
+    const current = parseInt(pointsEl.textContent || "0") + ev.data.points;
+    pointsEl.textContent = current;
+    updateChart(current);
+    log(`Pac-Man: +${ev.data.points}`);
   }
 
-  // 2 — Game wants on-chain TX
-  if (d.type === "SOMNIA_ONCHAIN_SUBMIT_REQUEST") {
-    submitScore(d.score);
+  // game over → submit on-chain
+  if (ev.data.type === "SOMNIA_GAME_OVER") {
+    log(`Submitting on-chain score: ${ev.data.score}`);
+    await window.submitScoreOnchain(ev.data.score);
   }
 
-  // 3 — Points from game
-  if (d.type === "SOMNIA_POINT_EVENT") {
-    trackedPoints += d.points;
-    pointsEl.textContent = trackedPoints;
-    activity("Game +1 point");
-  }
-
-  // 4 — Dynamic resize
-  if (d.type === "PACMAN_RESIZE") {
-    pacIframe.style.height = d.height + "px";
-  }
-
-  // 5 — Game Over
-  if (d.type === "SOMNIA_GAME_OVER") {
-    activity("Game Over — Score: " + d.score);
+  // iframe resize
+  if (ev.data.type === "PACMAN_RESIZE") {
+    const iframe = document.getElementById("pacman-iframe");
+    iframe.style.height = ev.data.height + "px";
   }
 });
 
-
-// ================================
+// ------------------------------
 // INIT
-// ================================
-
-activity("Init ready.");
-streamStatus("DISCONNECTED", false);
+// ------------------------------
+initChart();
+log("DreamStream PRO+ Initialized.");
