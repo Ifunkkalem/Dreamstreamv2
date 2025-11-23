@@ -5,6 +5,16 @@
     <title>Pacman Hybrid — Somnia Edition</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 
+    <button id="btnStartChain">Start Game (0.01 STT)</button>
+
+<script>
+document.getElementById("btnStartChain").onclick = async () => {
+    const tx = await window.Web3Somnia.start();
+    if (!tx) return alert("Start game failed");
+    alert("Game started on-chain!");
+};
+</script>
+
     <!-- GAME STYLE -->
     <link rel="stylesheet" href="pacman.css" />
 
