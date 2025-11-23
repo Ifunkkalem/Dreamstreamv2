@@ -1,86 +1,118 @@
-// web3.js — FINAL Somnia Web3 Utility Layer (Competition Edition)
+// web3.js — FINAL SOMNIA TESTNET + PACMAN REWARD
+// -------------------------------------------------
+
+const SOMNIA_CHAIN = {
+    chainId: "0xC4B8", // 50312 decimal → hex
+    chainName: "Somnia Testnet",
+    nativeCurrency: {
+        name: "Somnia Test Token",
+        symbol: "STT",
+        decimals: 18
+    },
+    rpcUrls: ["https://dream-rpc.somnia.network"],
+    blockExplorerUrls: ["https://explorer.somnia.network"]
+};
+
+// Kontrak final (PENTING)
+const PACMAN_REWARD = "0x3fcb2265EE7d8d854c8a1e5BCc6d0c16d90E88e1";
+const PAC_TOKEN = "0xf0993eb1fE7a5368778c4B5a8aE52c0fd503E7c9";
+
+// ABI berdasar kontrak yang kamu deploy
+const PACMAN_REWARD_ABI = [
+    {
+        "inputs":[{"internalType":"address","name":"_pacToken","type":"address"}],
+        "stateMutability":"nonpayable",
+        "type":"constructor"
+    },
+    {
+        "inputs":[],
+        "name":"startFee",
+        "outputs":[{"internalType":"uint256","name":"","type":"uint256"}],
+        "stateMutability":"view",
+        "type":"function"
+    },
+    {
+        "inputs":[],
+        "name":"claimFee",
+        "outputs":[{"internalType":"uint256","name":"","type":"uint256"}],
+        "stateMutability":"view",
+        "type":"function"
+    },
+    {
+        "inputs":[{"internalType":"uint256","name":"points","type":"uint256"}],
+        "name":"submitScore",
+        "outputs":[],
+        "stateMutability":"payable",
+        "type":"function"
+    },
+    {
+        "inputs":[],
+        "name":"startGame",
+        "outputs":[],
+        "stateMutability":"payable",
+        "type":"function"
+    }
+];
+
+let provider;
+let signer;
+let contract;
 
 window.Web3Somnia = {
-    provider: null,
-    signer: null,
-    address: null,
-    contract: null,
 
-    // Initialize provider safely
-    init() {
-        if (typeof window.ethereum === "undefined") {
-            console.warn("MetaMask not found");
-            return false;
+    // CONNECT METAMASK
+    connect: async () => {
+        if (!window.ethereum) {
+            alert("MetaMask tidak ditemukan!");
+            return null;
         }
 
-        this.provider = new ethers.providers.Web3Provider(window.ethereum);
-        return true;
-    },
-
-    // Connect wallet
-    async connect() {
         try {
-            if (!this.init()) return null;
-
-            const accounts = await window.ethereum.request({
-                method: "eth_requestAccounts"
+            // Switch chain ke somnia testnet
+            await window.ethereum.request({
+                method: "wallet_addEthereumChain",
+                params: [SOMNIA_CHAIN]
             });
 
-            this.address = accounts[0];
-            this.signer = this.provider.getSigner();
+            provider = new ethers.providers.Web3Provider(window.ethereum);
+            signer = provider.getSigner();
+            contract = new ethers.Contract(PACMAN_REWARD, PACMAN_REWARD_ABI, signer);
 
-            return this.address;
+            const addr = await signer.getAddress();
+            return addr;
 
         } catch (e) {
-            console.error("Wallet Connect Error:", e);
+            console.error("Connect error:", e);
             return null;
         }
     },
 
-    // Load smart contract instance (from config.js)
-    loadContract() {
-        if (!window.SOMNIA_CONTRACT) return null;
-
-        this.contract = new ethers.Contract(
-            window.SOMNIA_CONTRACT.address,
-            window.SOMNIA_CONTRACT.abi,
-            this.signer
-        );
-
-        return this.contract;
-    },
-
-    // Read only
-    async readScore(address) {
+    // START GAME → bayar 0.01 STT
+    start: async () => {
         try {
-            if (!this.contract) this.loadContract();
-            return await this.contract.getScore(address);
-        } catch (e) {
-            console.error("Read Error:", e);
-            return 0;
-        }
-    },
-
-    // Write score
-    async submitScore(score) {
-        try {
-            if (!this.signer) await this.connect();
-            if (!this.contract) this.loadContract();
-
-            const tx = await this.contract.submitScore({
-                value: 0
+            const tx = await contract.startGame({
+                value: ethers.utils.parseEther("0.01")
             });
-
             return tx;
 
         } catch (err) {
-            console.error("TX error:", err);
+            console.error("Start game error:", err);
+            return null;
+        }
+    },
+
+    // SUBMIT SCORE → bayar 0.001 STT
+    submitScore: async (points) => {
+        try {
+            const tx = await contract.submitScore(points, {
+                value: ethers.utils.parseEther("0.001")
+            });
+            return tx;
+
+        } catch (err) {
+            console.error("Submit error:", err);
             return null;
         }
     }
-};
 
-// GLOBAL bridge for Pac-Man iframe
-window.submitScoreOnchain = async (score) => {
-    return await window.Web3Somnia.submitScore(score);
 };
