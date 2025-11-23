@@ -125,6 +125,16 @@ function checkGameOver() {
     running = false;
     clearInterval(ghostInterval);
 
+    window.submitScoreOnchain = async (score) => {
+    const tx = await window.Web3Somnia.submitScore(score);
+
+    if (!tx) {
+        console.log("FAILED TX");
+        return;
+    }
+
+    console.log("Score submitted TX:", tx.hash);
+};
     alert("GAME OVER — Score: " + score);
 
     // Send score to parent for onchain submission
