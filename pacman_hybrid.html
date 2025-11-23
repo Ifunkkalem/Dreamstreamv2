@@ -1,95 +1,69 @@
 <!doctype html>
 <html lang="en">
 <head>
-    <meta charset="utf-8" />
-    <title>Pacman Hybrid — Somnia Edition</title>
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<meta charset="utf-8" />
+<title>Pacman Hybrid — Somnia Edition</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
 
-    <button id="btnStartChain">Start Game (0.01 STT)</button>
-
-<script>
-document.getElementById("btnStartChain").onclick = async () => {
-    const tx = await window.Web3Somnia.start();
-    if (!tx) return alert("Start game failed");
-    alert("Game started on-chain!");
-};
-</script>
-
-    <!-- GAME STYLE -->
-    <link rel="stylesheet" href="pacman.css" />
-
-    <!-- ETHERS.JS -->
-    <script src="https://cdn.jsdelivr.net/npm/ethers@5.7.2/dist/ethers.umd.min.js"></script>
-
-    <!-- CONFIG + WEB3 (untuk submit score) -->
-    <script src="config.js"></script>
-    <script src="web3.js"></script>
+<link rel="stylesheet" href="pacman.css" />
+<script src="https://cdn.jsdelivr.net/npm/ethers@5.7.2/dist/ethers.umd.min.js"></script>
+<script src="config.js"></script>
+<script src="web3.js"></script>
+<script src="pacman_hybrid.js"></script>
 </head>
 
 <body style="background:#05060b; padding:10px;">
 
-    <h2 style="color:#59ffc9; font-family:Arial; margin-bottom:10px;">
-        DreamStream — Pac-Man Hybrid
-    </h2>
+<h2 style="color:#59ffc9; font-family:Arial; margin-bottom:10px;">
+    DreamStream — Pac-Man Hybrid
+</h2>
 
-    <!-- Connection block -->
-    <div style="margin-bottom:12px;">
-        <button id="btnConnect" style="padding:8px 12px; background:#222; color:#59ffc9; border:1px solid #59ffc9;">
-            Connect Wallet
-        </button>
-        <span id="addr" style="color:white; margin-left:10px;">Not Connected</span>
-    </div>
+<div>Wallet: <span id="addr" style="color:white;">Not Connected</span></div>
 
-    <!-- Grid container -->
-    <div id="grid-container"></div>
+<div id="grid-container"></div>
+<div>Score: <span id="score">0</span></div>
 
-    <!-- Score UI -->
-    <div style="margin-top:10px; color:white; font-size:18px;">
-        Score: <span id="score">0</span>
-    </div>
+<button id="start-button"
+    style="margin-top:10px; padding:8px 14px; background:#59ffc9; border:none; color:#000;">
+    Start Game
+</button>
 
-    <button id="start-button"
-        style="margin-top:10px; padding:8px 14px; background:#59ffc9; border:none; color:#000;">
-        Start Game
-    </button>
+<div id="mobile-controls">
+    <button class="control-btn" data-dir="up">▲</button>
+    <button class="control-btn" data-dir="left">◄</button>
+    <button class="control-btn" data-dir="down">▼</button>
+    <button class="control-btn" data-dir="right">►</button>
+</div>
 
-    <!-- Manual submit onchain -->
-    <div style="margin-top:12px;">
-        <button id="btnSubmit"
-            style="padding:8px 14px; background:#111; border:1px solid #59ffc9; color:#59ffc9;">
-            Submit Score On-Chain
-        </button>
-        <div id="txStatus" style="color:#59ffc9; margin-top:5px; font-size:14px;"></div>
-    </div>
+<script>
+// Terima alamat wallet dari parent (index.html)
+let walletAddress = null;
+window.addEventListener('message', (event) => {
+    if (event.data.type === 'walletConnected') {
+        walletAddress = event.data.address;
+        document.getElementById("addr").innerText = walletAddress;
+    }
+});
 
-    <!-- Logic file -->
-    <script src="pacman_hybrid.js"></script>
+// Start Game pakai wallet dari index.html
+document.getElementById("start-button").onclick = async () => {
+    if (!walletAddress) return alert("Please connect wallet first!");
+    const tx = await window.Web3Somnia.start(walletAddress);
+    if (!tx) return alert("Start game failed!");
+    alert("Game started on-chain!");
+};
 
-    <!-- CONNECT WALLET LOGIC -->
-    <script>
-        document.getElementById("btnConnect").onclick = async () => {
-            const addr = await window.Web3Somnia.connect();
-            if (!addr) {
-                alert("MetaMask not found or rejected.");
-                return;
-            }
-            document.getElementById("addr").innerHTML = addr;
-        };
+// Tombol arah mobile
+document.querySelectorAll('.control-btn').forEach(btn => {
+    btn.addEventListener('touchstart', () => movePacMan(btn.dataset.dir));
+    btn.addEventListener('mousedown', () => movePacMan(btn.dataset.dir));
+});
 
-        // Manual submit button
-        document.getElementById("btnSubmit").onclick = async () => {
-            const sc = parseInt(document.getElementById("score").innerHTML);
-            document.getElementById("txStatus").innerHTML = "Submitting...";
+// Fungsi gerak karakter
+function movePacMan(direction) {
+    console.log("Move Pac-Man:", direction);
+}
+</script>
 
-            const tx = await window.Web3Somnia.submitScore(sc);
-
-            if (!tx) {
-                document.getElementById("txStatus").innerHTML = "Transaction failed.";
-                return;
-            }
-            document.getElementById("txStatus").innerHTML =
-                "TX Sent: " + tx.hash.substring(0, 12) + "...";
-        };
-    </script>
 </body>
 </html>
