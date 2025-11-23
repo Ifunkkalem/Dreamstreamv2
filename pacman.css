@@ -1,4 +1,4 @@
-/* pacman.css — styles specific for pacman_hybrid.html (grid + UI) */
+/* pacman.css — FIXED version (classes now match pacman_hybrid.js) */
 
 body {
   margin: 12px;
@@ -8,9 +8,17 @@ body {
   text-align: center;
 }
 
-h2 { margin: 6px 0 12px 0; font-size: 18px }
-#score { font-weight: 700; color: #59ffc9; }
+h2 {
+  margin: 6px 0 12px 0;
+  font-size: 18px
+}
 
+#score {
+  font-weight: 700;
+  color: #59ffc9;
+}
+
+/* GRID */
 #grid-container {
   margin: 12px auto;
   display: grid;
@@ -23,8 +31,8 @@ h2 { margin: 6px 0 12px 0; font-size: 18px }
   border-radius: 10px;
 }
 
-/* base square */
-.square {
+/* base cell */
+.cell {
   width: 18px;
   height: 18px;
   background: #071126;
@@ -33,37 +41,37 @@ h2 { margin: 6px 0 12px 0; font-size: 18px }
 }
 
 /* wall */
-.square.wall {
+.cell.wall {
   background: linear-gradient(180deg,#0e1724,#081222);
   border-radius: 4px;
   box-shadow: inset 0 -3px 6px rgba(0,0,0,0.6);
 }
 
 /* dot */
-.square.dot {
+.cell.dot {
   background: radial-gradient(circle at 35% 30%, #ffd54f 0%, #ffb347 45%);
   box-shadow: none;
   border-radius: 50%;
-  transform: scale(0.85);
+  transform: scale(0.78);
 }
 
-/* pac-man */
-.square.pac-man {
+/* PACMAN */
+.cell.pac {
   background: radial-gradient(circle at 35% 30%, #ffd54f 0%, #ffb347 60%);
   border-radius: 50%;
-  box-shadow: 0 3px 8px rgba(255,180,60,0.08);
+  box-shadow: 0 3px 8px rgba(255,180,60,0.15);
+  transform: scale(1.1);
+}
+
+/* GHOST */
+.cell.ghost {
+  background: linear-gradient(180deg, #ff5b5b, #ff2d2d);
+  border-radius: 50%;
+  box-shadow: 0 4px 10px rgba(255,60,60,0.2);
   transform: scale(1.05);
 }
 
-/* ghost */
-.square.ghost {
-  background: linear-gradient(180deg, #ff5b5b, #ff2d2d);
-  border-radius: 50%;
-  box-shadow: 0 4px 10px rgba(255,60,60,0.12);
-  transform: scale(1.02);
-}
-
-/* Controls */
+/* buttons */
 #start-button,
 #btnConnect,
 #btnSubmit {
@@ -83,8 +91,8 @@ h2 { margin: 6px 0 12px 0; font-size: 18px }
   font-size: 13px;
 }
 
-/* responsive adjustments */
+/* mobile */
 @media (max-width: 600px) {
   #grid-container { grid-template-columns: repeat(20, 14px); gap: 3px; }
-  .square { width: 14px; height: 14px; }
+  .cell { width: 14px; height: 14px; }
 }
