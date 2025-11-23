@@ -1,9 +1,10 @@
-// pacman_hybrid.js
-// Hybrid-safe Pacman: runs inside iframe, posts requests to parent for wallet & on-chain txs,
-// receives results back from parent and displays TX status.
+// pacman_hybrid.js — Final Hybrid Pac-Man (Somnia Competition Edition)
+// - Runs inside iframe (pacman_hybrid.html)
+// - Posts events to parent: SOMNIA_POINT_EVENT, SOMNIA_GAME_OVER, PACMAN_RESIZE
+// - Can request parent to connect / submit on-chain via REQUEST_CONNECT and SOMNIA_ONCHAIN_SUBMIT_REQUEST
+// - Self-contained, no external dependencies beyond browser
 
 (function () {
-  // Layout (20 x 17)
   const layout = [
     1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,
     1,2,2,2,2,2,2,2,2,1,1,2,2,2,2,2,2,2,2,1,
@@ -25,6 +26,15 @@
   ];
 
   const width = 20;
+  const gridContainer = document.getElementById('grid-container');
+  const scoreEl = document.getElementById('score');
+  const statusEl = document.getElementById('status-message');
+  const startBtn = document.getElementById('start-button');
+  const connectBtn = document.getElementById('btnConnect');
+  const submitBtn = document.getElementById('btnSubmit');
+  const addrEl = document.getElementById('addr');
+  const txStatusEl = document.getElementById('txStatus');
+
   let squares = [];
   let pacmanIndex = 301;
   let ghostIndex = 191;
@@ -32,144 +42,199 @@
   let running = false;
   let ghostInterval = null;
 
-  function $id(id){ return document.getElementById(id); }
-  function post(message){ try{ window.parent.postMessage(message, "*"); } catch(e){} }
-
-  function createGrid(){
-    const grid = $id('grid-container');
-    if(!grid) return;
-    grid.innerHTML = '';
-    squares = [];
-    const size = (window.innerWidth <= 600) ? 15 : 18;
-    grid.style.gridTemplateColumns = `repeat(${width}, ${size}px)`;
-    for(let i=0;i<layout.length;i++){
-      const s = document.createElement('div'); s.className='square';
-      if(layout[i]===1) s.classList.add('wall');
-      if(layout[i]===2) s.classList.add('dot');
-      grid.appendChild(s); squares.push(s);
+  function postToParent(msg) {
+    try {
+      window.parent.postMessage(msg, '*');
+    } catch (e) {
+      // ignore
     }
-    pacmanIndex = Math.max(0, Math.min(layout.length-1, pacmanIndex));
-    ghostIndex = Math.max(0, Math.min(layout.length-1, ghostIndex));
+  }
+
+  function createGrid() {
+    if (!gridContainer) return;
+    gridContainer.innerHTML = '';
+    squares = [];
+    const squareSize = window.innerWidth <= 600 ? 15 : 18;
+    gridContainer.style.gridTemplateColumns = `repeat(${width}, ${squareSize}px)`;
+
+    for (let i = 0; i < layout.length; i++) {
+      const div = document.createElement('div');
+      div.className = 'square';
+      if (layout[i] === 1) div.classList.add('wall');
+      if (layout[i] === 2) div.classList.add('dot');
+      gridContainer.appendChild(div);
+      squares.push(div);
+    }
+
+    // ensure initial indices valid
+    pacmanIndex = Math.max(0, Math.min(layout.length - 1, pacmanIndex));
+    ghostIndex = Math.max(0, Math.min(layout.length - 1, ghostIndex));
+
     squares[pacmanIndex].classList.add('pac-man');
     squares[ghostIndex].classList.add('ghost');
-    $id('score') && ($id('score').textContent = score);
+
+    updateScore(0);
   }
 
-  function collectDot(){
-    if(!squares[pacmanIndex]) return;
-    if(squares[pacmanIndex].classList.contains('dot')){
+  function updateScore(v) {
+    score = v;
+    if (scoreEl) scoreEl.textContent = String(score);
+  }
+
+  function collectDot() {
+    if (!squares[pacmanIndex]) return;
+    if (squares[pacmanIndex].classList.contains('dot')) {
       squares[pacmanIndex].classList.remove('dot');
       score++;
-      $id('score') && ($id('score').textContent = score);
-      post({ type:'SOMNIA_POINT_EVENT', points:1, score });
+      if (scoreEl) scoreEl.textContent = String(score);
+      postToParent({ type: 'SOMNIA_POINT_EVENT', points: 1, score });
     }
   }
 
-  function movePac(key){
-    if(!running) return;
-    if(!squares[pacmanIndex]) return;
+  function movePac(key) {
+    if (!running) return;
+    if (!squares[pacmanIndex]) return;
+
     squares[pacmanIndex].classList.remove('pac-man');
     let next = pacmanIndex;
-    if(key==='ArrowLeft') next = pacmanIndex - 1;
-    if(key==='ArrowRight') next = pacmanIndex + 1;
-    if(key==='ArrowUp') next = pacmanIndex - width;
-    if(key==='ArrowDown') next = pacmanIndex + width;
-    if(next >= 0 && next < layout.length && !squares[next].classList.contains('wall')){
+
+    if (key === 'ArrowLeft') next = pacmanIndex - 1;
+    if (key === 'ArrowRight') next = pacmanIndex + 1;
+    if (key === 'ArrowUp') next = pacmanIndex - width;
+    if (key === 'ArrowDown') next = pacmanIndex + width;
+
+    if (next >= 0 && next < layout.length && !squares[next].classList.contains('wall')) {
       pacmanIndex = next;
       collectDot();
     }
-    squares[pacmanIndex] && squares[pacmanIndex].classList.add('pac-man');
-    checkOver();
+
+    squares[pacmanIndex].classList.add('pac-man');
+    checkGameOver();
   }
 
-  function moveGhost(){
-    if(!running) return;
-    const dirs = [-1,1,-width,width];
-    let best = ghostIndex, bestDist = 1e9;
-    dirs.forEach(d=>{
+  function moveGhost() {
+    if (!running) return;
+
+    const dirs = [-1, 1, -width, width];
+    let best = ghostIndex;
+    let bestDist = Infinity;
+
+    dirs.forEach(d => {
       const t = ghostIndex + d;
-      if(t<0||t>=layout.length) return;
-      if(!squares[t]||squares[t].classList.contains('wall')) return;
-      const dx = (t%width)-(pacmanIndex%width);
-      const dy = Math.floor(t/width)-Math.floor(pacmanIndex/width);
-      const dist = Math.abs(dx)+Math.abs(dy);
-      if(dist < bestDist){ bestDist = dist; best = t; }
+      if (t < 0 || t >= layout.length) return;
+      if (!squares[t] || squares[t].classList.contains('wall')) return;
+      const dx = (t % width) - (pacmanIndex % width);
+      const dy = Math.floor(t / width) - Math.floor(pacmanIndex / width);
+      const dist = Math.abs(dx) + Math.abs(dy);
+      if (dist < bestDist) {
+        bestDist = dist;
+        best = t;
+      }
     });
-    squares[ghostIndex] && squares[ghostIndex].classList.remove('ghost');
+
+    if (squares[ghostIndex]) squares[ghostIndex].classList.remove('ghost');
     ghostIndex = best;
-    squares[ghostIndex] && squares[ghostIndex].classList.add('ghost');
-    checkOver();
+    if (squares[ghostIndex]) squares[ghostIndex].classList.add('ghost');
+    checkGameOver();
   }
 
-  function checkOver(){
-    if(pacmanIndex === ghostIndex){
+  function checkGameOver() {
+    if (pacmanIndex === ghostIndex) {
       running = false;
-      if(ghostInterval){ clearInterval(ghostInterval); ghostInterval=null; }
-      $id('status-message') && ($id('status-message').textContent = 'GAME OVER');
-      post({ type:'SOMNIA_GAME_OVER', score });
+      if (ghostInterval) clearInterval(ghostInterval);
+      if (statusEl) statusEl.textContent = 'GAME OVER';
+      postToParent({ type: 'SOMNIA_GAME_OVER', score });
     }
   }
 
-  function startGame(){
-    if(running) return;
-    running = true; score = 0;
+  function startGame() {
+    if (running) return;
+    running = true;
+    score = 0;
+    updateScore(0);
     createGrid();
-    $id('status-message') && ($id('status-message').textContent = 'GO!');
-    if(ghostInterval) clearInterval(ghostInterval);
+    if (ghostInterval) clearInterval(ghostInterval);
     ghostInterval = setInterval(moveGhost, 380);
+    if (statusEl) statusEl.textContent = 'GO!';
     sendHeight();
   }
 
-  function sendHeight(){
-    setTimeout(()=>{ post({ type:'PACMAN_RESIZE', height: document.body.scrollHeight }); }, 120);
+  function sendHeight() {
+    setTimeout(() => {
+      try {
+        postToParent({ type: 'PACMAN_RESIZE', height: document.body.scrollHeight });
+      } catch (e) {}
+    }, 120);
   }
 
-  // Buttons: connect should ask parent to connect (parent does metaMask)
-  $id('btnConnect')?.addEventListener('click', ()=> {
-    post({ type: 'REQUEST_CONNECT' });
-  });
+  // Request parent to connect wallet (parent will handle MetaMask)
+  if (connectBtn) {
+    connectBtn.addEventListener('click', () => {
+      postToParent({ type: 'REQUEST_CONNECT' });
+    });
+  }
 
-  // When user presses Submit On-Chain in iframe UI, ask parent to submit (parent will call contract)
-  $id('btnSubmit')?.addEventListener('click', ()=> {
-    post({ type: 'SOMNIA_ONCHAIN_SUBMIT_REQUEST', score });
-  });
+  // Request parent to submit score on-chain
+  if (submitBtn) {
+    submitBtn.addEventListener('click', () => {
+      postToParent({ type: 'SOMNIA_ONCHAIN_SUBMIT_REQUEST', score });
+    });
+  }
 
   // Keyboard controls
-  window.addEventListener('keyup', e => {
-    if(['ArrowLeft','ArrowRight','ArrowUp','ArrowDown'].includes(e.key)) movePac(e.key);
+  window.addEventListener('keyup', (e) => {
+    if (['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown'].includes(e.key)) {
+      movePac(e.key);
+    }
   });
 
-  // Listen for parent responses (connect result, tx result)
+  // Mobile control buttons if exist
+  document.querySelectorAll('.controls-mobile button[data-key]').forEach(b => {
+    b.addEventListener('click', () => {
+      const k = b.getAttribute('data-key');
+      if (!running) startGame();
+      movePac(k);
+    });
+  });
+
+  // Listen replies from parent
   window.addEventListener('message', (ev) => {
     const d = ev.data;
-    if(!d || !d.type) return;
-    if(d.type === 'CONNECT_RESULT') {
-      // d.success, d.address
-      if(d.success) { $id('addr').textContent = d.address || 'Connected'; }
-      else { $id('addr').textContent = 'Connect failed'; alert('Parent failed to connect wallet: '+(d.error||'unknown')); }
-    }
-    if(d.type === 'SOMNIA_ONCHAIN_SUBMIT_RESULT') {
-      // d.success, d.txHash, d.error
-      if(d.success) {
-        $id('txStatus') && ($id('txStatus').textContent = 'Submitted: ' + d.txHash);
-        // notify parent & local
-        post({ type:'SOMNIA_ONCHAIN_SUBMIT_ACK', tx: d.txHash, score });
+    if (!d || !d.type) return;
+
+    if (d.type === 'CONNECT_RESULT') {
+      if (d.success) {
+        if (addrEl) addrEl.textContent = d.address || 'Connected';
       } else {
-        $id('txStatus') && ($id('txStatus').textContent = 'Submit failed: ' + (d.error||''));
+        if (addrEl) addrEl.textContent = 'Connect failed';
+        alert('Parent failed to connect wallet: ' + (d.error || ''));
+      }
+    }
+
+    if (d.type === 'SOMNIA_ONCHAIN_SUBMIT_RESULT') {
+      if (d.success) {
+        if (txStatusEl) txStatusEl.textContent = 'TX: ' + d.txHash;
+        // optionally notify parent ack
+        postToParent({ type: 'SOMNIA_ONCHAIN_SUBMIT_ACK', tx: d.txHash, score });
+      } else {
+        if (txStatusEl) txStatusEl.textContent = 'Submit failed: ' + (d.error || '');
       }
     }
   });
 
   // Start button
-  $id('start-button')?.addEventListener('click', startGame);
+  if (startBtn) startBtn.addEventListener('click', startGame);
 
-  // Init
-  window.addEventListener('load', ()=>{
+  // Initialize grid on load and post size
+  window.addEventListener('load', () => {
     createGrid();
     sendHeight();
     window.addEventListener('resize', sendHeight);
   });
 
-  // Expose API (optional)
-  window.pacmanAPI = { start: startGame, getScore: () => score };
+  // expose API
+  window.pacmanAPI = {
+    start: startGame,
+    getScore: () => score
+  };
 })();
