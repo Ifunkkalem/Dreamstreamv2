@@ -1,7 +1,90 @@
-#grid-container{display:grid;grid-template-columns:repeat(20,18px);gap:2px;margin:14px auto;max-width:420px}
-.square{width:18px;height:18px;background:#071126;border-radius:2px}
-.square.wall{background:#1a2333}
-.square.dot{background:#ffd54f}
-.square.pac-man{background:#ffd54f;border-radius:50%}
-.square.ghost{background:#ff5252;border-radius:50%}
-button{padding:8px 12px;border-radius:6px;background:#0ea5a8;border:none;color:#021;cursor:pointer}
+/* pacman.css — styles specific for pacman_hybrid.html (grid + UI) */
+
+body {
+  margin: 12px;
+  font-family: Inter, Arial, sans-serif;
+  background: linear-gradient(180deg,#02040a,#041127);
+  color: #eaf7ff;
+  text-align: center;
+}
+
+h2 { margin: 6px 0 12px 0; font-size: 18px }
+#score { font-weight: 700; color: #59ffc9; }
+
+#grid-container {
+  margin: 12px auto;
+  display: grid;
+  grid-template-columns: repeat(20, 18px);
+  gap: 4px;
+  justify-content: center;
+  max-width: 100%;
+  background: rgba(255,255,255,0.02);
+  padding: 10px;
+  border-radius: 10px;
+}
+
+/* base square */
+.square {
+  width: 18px;
+  height: 18px;
+  background: #071126;
+  border-radius: 3px;
+  box-shadow: inset 0 -2px 0 rgba(0,0,0,0.6);
+}
+
+/* wall */
+.square.wall {
+  background: linear-gradient(180deg,#0e1724,#081222);
+  border-radius: 4px;
+  box-shadow: inset 0 -3px 6px rgba(0,0,0,0.6);
+}
+
+/* dot */
+.square.dot {
+  background: radial-gradient(circle at 35% 30%, #ffd54f 0%, #ffb347 45%);
+  box-shadow: none;
+  border-radius: 50%;
+  transform: scale(0.85);
+}
+
+/* pac-man */
+.square.pac-man {
+  background: radial-gradient(circle at 35% 30%, #ffd54f 0%, #ffb347 60%);
+  border-radius: 50%;
+  box-shadow: 0 3px 8px rgba(255,180,60,0.08);
+  transform: scale(1.05);
+}
+
+/* ghost */
+.square.ghost {
+  background: linear-gradient(180deg, #ff5b5b, #ff2d2d);
+  border-radius: 50%;
+  box-shadow: 0 4px 10px rgba(255,60,60,0.12);
+  transform: scale(1.02);
+}
+
+/* Controls */
+#start-button,
+#btnConnect,
+#btnSubmit {
+  margin: 8px 6px;
+  padding: 8px 14px;
+  border-radius: 8px;
+  border: none;
+  background: #2f6bff;
+  color: white;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+#txStatus {
+  margin-top: 8px;
+  color: #9fb3c8;
+  font-size: 13px;
+}
+
+/* responsive adjustments */
+@media (max-width: 600px) {
+  #grid-container { grid-template-columns: repeat(20, 14px); gap: 3px; }
+  .square { width: 14px; height: 14px; }
+}
