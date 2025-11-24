@@ -1,151 +1,200 @@
-/* pacman_hybrid.js – FINAL WITH LAYOUT + D-PAD */
+/* pacman_hybrid.js — DreamStream v2 FINAL */
 
-let width = 20;
-
-// 0 = dot, 1 = wall, 2 = empty space
-window.pacmanLayout = [
-  1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,
-  1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,
-  1,0,1,1,1,0,1,1,1,1,1,1,1,0,1,1,1,0,0,1,
-  1,0,1,0,0,0,1,0,0,0,0,0,1,0,0,0,1,0,0,1,
-  1,0,1,0,1,1,1,0,1,1,1,0,1,1,1,0,1,0,0,1,
-  1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,
-  1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,
-
-  1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,
-  1,0,1,1,0,1,1,1,1,1,1,1,1,0,1,1,0,1,0,1,
-  1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,
-
-  1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1
-];
-
-let grid = [];
-let squares = [];
-let pacIndex = 22;
-let ghostIndex = 377;
 let score = 0;
 let running = false;
 let ghostInterval = null;
 
-/* BUILD GRID */
-function createBoard() {
-  const layout = window.pacmanLayout;
-  const container = document.getElementById("grid-container");
-  container.innerHTML = "";
+const grid = document.getElementById("grid-container");
+const scoreEl = document.getElementById("score");
+
+const width = 20;
+let squares = [];
+let pacIndex = 301;
+let ghostIndex = 191;
+
+const layout = [
+  1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,
+  1,2,2,2,2,2,2,2,2,1,1,2,2,2,2,2,2,2,2,1,
+  1,2,1,1,1,1,1,2,2,1,1,2,2,1,1,1,1,1,2,1,
+  1,2,1,2,2,2,2,2,2,2,2,2,2,2,2,2,1,2,2,1,
+  1,2,1,2,1,1,1,1,1,1,1,1,1,1,1,2,1,2,1,1,
+  1,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,1,
+  1,1,1,2,1,1,1,1,1,2,2,1,1,1,1,1,2,1,1,1,
+  1,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,1,
+  1,2,1,1,1,1,1,1,1,0,0,1,1,1,1,1,1,2,1,1,
+  1,2,2,2,2,2,2,2,0,0,0,0,2,2,2,2,2,2,2,1,
+  1,1,1,1,1,1,1,2,0,0,0,0,2,1,1,1,1,1,1,1,
+  1,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,1,
+  1,2,1,1,1,1,1,1,1,2,2,1,1,1,1,1,1,2,1,1,
+  1,2,1,2,2,2,2,2,2,2,2,2,2,2,2,2,1,2,2,1,
+  1,2,1,2,1,1,1,1,1,1,1,1,1,1,1,2,1,2,1,1,
+  1,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,1,
+  1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1
+];
+
+/* ----------------------------- GRID ----------------------------------- */
+
+function buildGrid() {
+  grid.innerHTML = "";
   squares = [];
+  grid.style.gridTemplateColumns = `repeat(${width}, 18px)`;
 
   for (let i = 0; i < layout.length; i++) {
-    const div = document.createElement("div");
-    div.classList.add("square");
+    const s = document.createElement("div");
+    s.className = "square";
 
-    if (layout[i] === 1) div.classList.add("wall");
-    if (layout[i] === 0) div.classList.add("dot");
+    if (layout[i] === 1) s.classList.add("wall");
+    if (layout[i] === 2) s.classList.add("dot");
 
-    container.appendChild(div);
-    squares.push(div);
+    grid.appendChild(s);
+    squares.push(s);
   }
-}
 
-/* PACMAN LOGIC */
-function removePacman() {
-  squares[pacIndex].classList.remove("pac-man");
-}
-
-function drawPacman() {
   squares[pacIndex].classList.add("pac-man");
-}
-
-function drawGhost() {
   squares[ghostIndex].classList.add("ghost");
 }
 
-function moveGhost() {
-  const dirs = [-1, 1, -width, width];
-  const dir = dirs[Math.floor(Math.random() * dirs.length)];
+/* --------------------------- MOVEMENT -------------------------------- */
 
-  if (!squares[ghostIndex + dir] || squares[ghostIndex + dir].classList.contains("wall")) return;
+function movePac(dir) {
+  if (!running) return;
+
+  squares[pacIndex].classList.remove("pac-man");
+
+  let next = pacIndex;
+  if (dir === "left") next--;
+  if (dir === "right") next++;
+  if (dir === "up") next -= width;
+  if (dir === "down") next += width;
+
+  if (squares[next] && !squares[next].classList.contains("wall")) {
+    pacIndex = next;
+  }
+
+  squares[pacIndex].classList.add("pac-man");
+
+  collect();
+  checkGameOver();
+}
+
+document.addEventListener("keyup", e => {
+  if (e.key === "ArrowLeft") movePac("left");
+  if (e.key === "ArrowRight") movePac("right");
+  if (e.key === "ArrowUp") movePac("up");
+  if (e.key === "ArrowDown") movePac("down");
+});
+
+document.getElementById("btn-up").onclick = () => movePac("up");
+document.getElementById("btn-down").onclick = () => movePac("down");
+document.getElementById("btn-left").onclick = () => movePac("left");
+document.getElementById("btn-right").onclick = () => movePac("right");
+
+/* --------------------------- GHOST AI -------------------------------- */
+
+function ghostMove() {
+  if (!running) return;
+
+  const dirs = [-1, 1, -width, width];
+  let best = ghostIndex;
+  let bestDist = 9999;
+
+  dirs.forEach(d => {
+    const t = ghostIndex + d;
+    if (!squares[t] || squares[t].classList.contains("wall")) return;
+
+    const dist =
+      Math.abs((t % width) - (pacIndex % width)) +
+      Math.abs(Math.floor(t / width) - Math.floor(pacIndex / width));
+
+    if (dist < bestDist) {
+      bestDist = dist;
+      best = t;
+    }
+  });
 
   squares[ghostIndex].classList.remove("ghost");
-  ghostIndex += dir;
+  ghostIndex = best;
   squares[ghostIndex].classList.add("ghost");
 
   checkGameOver();
 }
+
+/* --------------------------- SCORING -------------------------------- */
+
+function collect() {
+  if (squares[pacIndex].classList.contains("dot")) {
+    squares[pacIndex].classList.remove("dot");
+    score++;
+    scoreEl.innerHTML = score;
+  }
+}
+
+/* --------------------------- GAME END ------------------------------- */
 
 function checkGameOver() {
   if (pacIndex === ghostIndex) {
     running = false;
     clearInterval(ghostInterval);
 
-    window.parent.postMessage({ type: "SOMNIA_GAME_OVER", score }, "*");
+    alert("GAME OVER! Skor: " + score);
 
-    resetGameState();
+    saveToLeaderboard(score);
+
+    resetGame();
   }
 }
 
-function eatDot() {
-  if (squares[pacIndex].classList.contains("dot")) {
-    score++;
-    squares[pacIndex].classList.remove("dot");
-
-    window.parent.postMessage({
-      type: "PACMAN_SCORE",
-      score
-    }, "*");
-  }
-}
-
-function resetGameState() {
+/* --------------------------- RESET --------------------------------- */
+function resetGame() {
   score = 0;
-  pacIndex = 22;
-  ghostIndex = 377;
-
-  createBoard();
-  drawPacman();
-  drawGhost();
+  scoreEl.innerHTML = 0;
+  pacIndex = 301;
+  ghostIndex = 191;
+  buildGrid();
 }
 
-function startGame() {
-  if (running) return;
+/* --------------------------- LEADERBOARD ---------------------------- */
+
+function saveToLeaderboard(s) {
+  let board = JSON.parse(localStorage.getItem("leaderboard") || "[]");
+  board.push({ score: s, time: Date.now() });
+  board.sort((a, b) => b.score - a.score);
+  localStorage.setItem("leaderboard", JSON.stringify(board));
+  renderLeaderboard();
+}
+
+function renderLeaderboard() {
+  const ul = document.getElementById("leaderboard");
+  ul.innerHTML = "";
+
+  let board = JSON.parse(localStorage.getItem("leaderboard") || "[]");
+
+  board.slice(0, 10).forEach((b, i) => {
+    const li = document.createElement("li");
+    li.textContent = `${i + 1}. Skor ${b.score}`;
+    ul.appendChild(li);
+  });
+}
+
+/* --------------------------- START GAME ----------------------------- */
+
+document.getElementById("start-button").onclick = async () => {
+  const ok = await window.Web3Somnia.startGame();
+  if (!ok) return;
+
   running = true;
+  ghostInterval = setInterval(ghostMove, 350);
+};
 
-  resetGameState();
-  ghostInterval = setInterval(moveGhost, 500);
+/* -------------------------- SWAP SCORE → PAC ------------------------ */
 
-  window.parent.postMessage({ type: "PACMAN_STARTED" }, "*");
-}
+document.getElementById("btnSwap").onclick = async () => {
+  const result = await window.Web3Somnia.swapScore(score);
+  document.getElementById("swapStatus").innerHTML = result;
+};
 
-/* CONTROLS */
-document.addEventListener("keydown", (e) => onMove(e.key));
-
-function onMove(dir) {
-  if (!running) return;
-
-  removePacman();
-
-  if (dir === "ArrowUp" && !squares[pacIndex - width].classList.contains("wall"))
-    pacIndex -= width;
-  if (dir === "ArrowDown" && !squares[pacIndex + width].classList.contains("wall"))
-    pacIndex += width;
-  if (dir === "ArrowLeft" && !squares[pacIndex - 1].classList.contains("wall"))
-    pacIndex -= 1;
-  if (dir === "ArrowRight" && !squares[pacIndex + 1].classList.contains("wall"))
-    pacIndex += 1;
-
-  drawPacman();
-  eatDot();
-  checkGameOver();
-}
-
-/* MOBILE D-PAD */
-function initMobilePad() {
-  document.getElementById("btn-up").onclick = () => onMove("ArrowUp");
-  document.getElementById("btn-down").onclick = () => onMove("ArrowDown");
-  document.getElementById("btn-left").onclick = () => onMove("ArrowLeft");
-  document.getElementById("btn-right").onclick = () => onMove("ArrowRight");
-}
-
+/* Init */
 window.onload = () => {
-  createBoard();
-  initMobilePad();
+  buildGrid();
+  renderLeaderboard();
 };
