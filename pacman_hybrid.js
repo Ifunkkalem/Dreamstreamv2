@@ -1,19 +1,17 @@
-// pacman_hybrid.js — FINAL ONCHAIN + ORIGIN SAFE + WORKING UI
-
-let score = 0;
-let running = false;
-let ghostInterval = null;
-
-const grid = document.getElementById("grid-container");
-const scoreEl = document.getElementById("score");
-const startBtn = document.getElementById("start-button");
+const gridContainer = document.getElementById('grid-container');
+const scoreDisplay = document.getElementById('score');
+const statusMessage = document.getElementById('txStatus');
+const startBtn = document.getElementById('start-button');
+const controls = document.getElementById('controls');
 
 const width = 20;
 let squares = [];
+let score = 0;
 let pacIndex = 301;
 let ghostIndex = 191;
+let running = false;
+let ghostInterval = null;
 
-// MATCHING LAYOUT (SAME AS MAIN GAME)
 const layout = [
   1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,
   1,2,2,2,2,2,2,2,2,1,1,2,2,2,2,2,2,2,2,1,
@@ -29,112 +27,106 @@ const layout = [
   1,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,1,
   1,2,1,1,1,1,1,1,1,2,2,1,1,1,1,1,1,2,1,1,
   1,2,1,2,2,2,2,2,2,2,2,2,2,2,2,2,1,2,2,1,
-  1,2,1,2,1,1,1,1,1,1,1,1,1,1,1,1,1,2,1,1,
+  1,2,1,2,1,1,1,1,1,1,1,1,1,1,1,2,1,2,1,1,
   1,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,1,
   1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1
 ];
 
-// BUILD GRID
-function buildGrid() {
-  grid.innerHTML = "";
-  squares = [];
-  grid.style.gridTemplateColumns = `repeat(${width}, 18px)`;
-  for (let i = 0; i < layout.length; i++) {
-    const s = document.createElement("div");
-    s.className = "cell";
-    if (layout[i] === 1) s.classList.add("wall");
-    if (layout[i] === 2) s.classList.add("dot");
-    grid.appendChild(s);
-    squares.push(s);
+function createGrid(){
+  gridContainer.innerHTML=''; squares=[];
+  const size = window.innerWidth <= 600 ? 14 : 18;
+  gridContainer.style.gridTemplateColumns = `repeat(${width}, ${size}px)`;
+  for(let i=0;i<layout.length;i++){
+    const sq = document.createElement('div');
+    sq.className = 'square';
+    if (layout[i]===1) sq.classList.add('wall');
+    if (layout[i]===2) sq.classList.add('dot');
+    gridContainer.appendChild(sq); squares.push(sq);
   }
-  squares[pacIndex].classList.add("pac");
-  squares[ghostIndex].classList.add("ghost");
+  squares[pacIndex].classList.add('pac-man');
+  squares[ghostIndex].classList.add('ghost');
 }
 
-// PAC-MAN MOVEMENT (Keyboard)
-document.addEventListener("keyup", e => {
-  if (!running) return;
-  squares[pacIndex].classList.remove("pac");
+function collectDot(){
+  if(squares[pacIndex].classList.contains('dot')){
+    squares[pacIndex].classList.remove('dot');
+    score++; scoreDisplay.textContent = score;
+    window.parent.postMessage({ type: 'SOMNIA_POINT_EVENT', points: 1 }, "*");
+  }
+}
+
+function movePacmanByDir(dir){
+  if(!running) return;
+  squares[pacIndex].classList.remove('pac-man');
   let next = pacIndex;
-  if (e.key === "ArrowLeft") next--;
-  if (e.key === "ArrowRight") next++;
-  if (e.key === "ArrowUp") next -= width;
-  if (e.key === "ArrowDown") next += width;
-  if (squares[next] && !squares[next].classList.contains("wall")) pacIndex = next;
-  squares[pacIndex].classList.add("pac");
-  collect();
+  if(dir==='left') next--;
+  if(dir==='right') next++;
+  if(dir==='up') next-=width;
+  if(dir==='down') next+=width;
+  if(squares[next] && !squares[next].classList.contains('wall')) pacIndex = next;
+  squares[pacIndex].classList.add('pac-man');
+  collectDot();
   checkGameOver();
+}
+
+document.addEventListener('keyup', (e)=>{
+  if(!running) return;
+  if(e.key==='ArrowLeft') movePacmanByDir('left');
+  if(e.key==='ArrowRight') movePacmanByDir('right');
+  if(e.key==='ArrowUp') movePacmanByDir('up');
+  if(e.key==='ArrowDown') movePacmanByDir('down');
 });
 
-// PAC-MAN MOVEMENT (Mobile)
-function movePacMan(direction) {
-  if (!running) return;
-  squares[pacIndex].classList.remove("pac");
-  let next = pacIndex;
-  if (direction === "left") next--;
-  if (direction === "right") next++;
-  if (direction === "up") next -= width;
-  if (direction === "down") next += width;
-  if (squares[next] && !squares[next].classList.contains("wall")) pacIndex = next;
-  squares[pacIndex].classList.add("pac");
-  collect();
-  checkGameOver();
-}
+controls.querySelectorAll('button').forEach(b=>{
+  b.addEventListener('touchstart', (ev)=>{ ev.preventDefault(); movePacmanByDir(b.dataset.dir); });
+  b.addEventListener('click', ()=> movePacmanByDir(b.dataset.dir));
+});
 
-// GHOST MOVEMENT
-function ghostMove() {
-  if (!running) return;
+function ghostMove(){
+  if(!running) return;
   const dirs = [-1,1,-width,width];
-  let best = ghostIndex;
-  let bestDist = 9999;
-  dirs.forEach(d => {
+  let best = ghostIndex, bestDist=1e9;
+  dirs.forEach(d=>{
     const t = ghostIndex + d;
-    if (!squares[t] || squares[t].classList.contains("wall")) return;
-    const dist = Math.abs((t % width)-(pacIndex % width)) + Math.abs(Math.floor(t/width)-Math.floor(pacIndex/width));
-    if (dist < bestDist) { bestDist = dist; best = t; }
+    if(!squares[t] || squares[t].classList.contains('wall')) return;
+    const dx = (t%width)-(pacIndex%width);
+    const dy = Math.floor(t/width)-Math.floor(pacIndex/width);
+    const dist = Math.abs(dx)+Math.abs(dy);
+    if(dist<bestDist){ bestDist=dist; best=t; }
   });
-  squares[ghostIndex].classList.remove("ghost");
+  squares[ghostIndex].classList.remove('ghost');
   ghostIndex = best;
-  squares[ghostIndex].classList.add("ghost");
+  squares[ghostIndex].classList.add('ghost');
   checkGameOver();
 }
 
-// SCORE SYSTEM
-function collect() {
-  if (squares[pacIndex].classList.contains("dot")) {
-    squares[pacIndex].classList.remove("dot");
-    score++;
-    scoreEl.innerHTML = score;
-    window.parent.postMessage({ type:"SOMNIA_POINT_EVENT", points:1 },"*");
+function checkGameOver(){
+  if(pacIndex===ghostIndex){
+    running=false; clearInterval(ghostInterval);
+    alert("GAME OVER! Score: "+score);
+    window.parent.postMessage({ type:'SOMNIA_GAME_OVER', score }, "*");
   }
 }
 
-// GAME OVER
-function checkGameOver() {
-  if (pacIndex === ghostIndex) {
-    running = false;
-    clearInterval(ghostInterval);
-    window.submitScoreOnchain = async (score) => {
-      const tx = await window.Web3Somnia.submitScore(score);
-      if (!tx) console.log("FAILED TX");
-      else console.log("Score submitted TX:", tx.hash);
-    };
-    alert("GAME OVER — Score: "+score);
-    window.parent.postMessage({ type:"SOMNIA_GAME_OVER", score }, "*");
-  }
-}
-
-// START BUTTON
-startBtn.onclick = () => {
+startBtn.onclick = async () => {
   if (running) return;
-  running = true;
-  score = 0;
-  scoreEl.innerHTML = 0;
+  // trigger onchain startFee
+  try {
+    const tx = await window.Web3Somnia.startGameOnchain();
+    if (tx) {
+      await tx.wait();
+      // play after mined
+    }
+  } catch(e){
+    alert("Start failed or rejected.");
+    console.error(e);
+    return;
+  }
+  running=true; score=0; scoreDisplay.textContent=0;
   ghostInterval = setInterval(ghostMove, 350);
 };
 
-// INIT GRID
-window.onload = () => {
-  buildGrid();
-  setTimeout(()=>window.parent.postMessage({ type:"PACMAN_RESIZE", height:document.body.scrollHeight },"*"),300);
+window.onload = function(){
+  createGrid();
+  setTimeout(()=>{ window.parent.postMessage({ type:'PACMAN_RESIZE', height: document.body.scrollHeight }, "*"); }, 200);
 };
