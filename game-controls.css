@@ -1,0 +1,4 @@
+#controls-mobile{position:fixed;bottom:18px;left:50%;transform:translateX(-50%);display:none;gap:8px;z-index:9999}
+#controls-mobile .row{display:flex;gap:8px;justify-content:center}
+.ctrl-btn{width:56px;height:56px;border-radius:10px;border:none;background:rgba(89,255,201,0.08);color:#59ffc9;font-size:24px;display:flex;align-items:center;justify-content:center}
+@media(max-width:800px){#controls-mobile{display:block}}
