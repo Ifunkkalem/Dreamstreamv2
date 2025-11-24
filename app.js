@@ -1,153 +1,132 @@
-// app.js — Final Somnia Competition Edition
-// Fully integrated with: SomniaStreamAdapter + Web3Somnia + Pac-Man hybrid.
+// app.js - glue code
+const btnConnect = document.getElementById('btn-connect');
+const addrDisplay = document.getElementById('addr-display');
+const balanceSttEl = document.getElementById('balance-stt');
+const balancePacEl = document.getElementById('balance-pac');
+const activityEl = document.getElementById('activity');
+const streamStatusEl = document.getElementById('stream-status');
+const pairsContainer = document.getElementById('pairs');
+const toggleSim = document.getElementById('toggle-sim');
+const pointsEl = document.getElementById('points');
 
-// DOM elements
-const btnMeta = document.getElementById("btn-metamask");
-const btnAddSomnia = document.getElementById("btn-add-somnia");
-const btnTrack = document.getElementById("btn-connect");
-const walletInput = document.getElementById("wallet-input");
-const liveIndicator = document.getElementById("live-indicator");
-const activityFeed = document.getElementById("activity");
-const pointsEl = document.getElementById("points");
-const missionsEl = document.getElementById("missions");
-const leaderboardEl = document.getElementById("leaderboard");
-const walletListEl = document.getElementById("wallet-list");
-const toggleSim = document.getElementById("toggle-sim");
-
-let trackedWallet = null;
-let stream = null;
+let streamAdapter = null;
 let pointsHistory = [];
 let chart = null;
 
-// ------------------------------
-// ACTIVITY LOG
-// ------------------------------
-function log(msg) {
-  const d = document.createElement("div");
-  d.textContent = `[${new Date().toLocaleTimeString()}] ${msg}`;
-  activityFeed.prepend(d);
+const mockPairs = {
+  SOMUSD: { price: 0.25, change: "+1.2%" },
+  SOMPAC: { price: 150, change: "-0.8%" },
+  PACUSD: { price: 0.0017, change: "+12.4%" }
+};
+
+function toast(msg) {
+  const d = document.createElement('div');
+  d.textContent = msg;
+  activityEl.prepend(d);
+  if (activityEl.children.length > 40) activityEl.removeChild(activityEl.lastChild);
 }
 
-// ------------------------------
-// CHART SETUP
-// ------------------------------
-function initChart() {
-  const ctx = document.getElementById("pointsChart").getContext("2d");
+async function onConnectClicked(){
+  const addr = await window.Web3Somnia.connect();
+  if (!addr) return alert("MetaMask not connected or rejected.");
+  addrDisplay.textContent = addr;
+  toast(`Wallet connected: ${addr}`);
+  // fetch balances
+  const bal = await window.Web3Somnia.getBalances(addr);
+  balanceSttEl.textContent = Number(bal.stt).toFixed(4) + " STT";
+  balancePacEl.textContent = Number(bal.pac).toFixed(4) + " PAC";
 
-  chart = new Chart(ctx, {
-    type: "line",
-    data: {
-      labels: [],
-      datasets: [
-        {
-          label: "Points",
-          data: [],
-          borderColor: "#00e8c6",
-          backgroundColor: "rgba(0,232,198,0.1)",
-          tension: 0.3
-        }
-      ]
+  // init stream (mock by default)
+  streamAdapter = new SDSStreamAdapter({
+    wallet: addr,
+    useMock: toggleSim.checked,
+    onPoints: (w,p) => {
+      pointsEl.textContent = p;
+      pointsHistory.push(p);
+      if (pointsHistory.length>60) pointsHistory.shift();
+      updateChart();
     },
-    options: {
-      scales: { x: { display: false } }
+    onEvent: (txt) => {
+      streamStatusEl.textContent = txt;
+      toast(txt);
+    },
+    onError: (e) => {
+      streamStatusEl.textContent = "Error";
+      toast("Stream error: " + (e.message||e));
     }
   });
+  streamAdapter.connect();
+  document.querySelector('.indicator').className='indicator online';
 }
 
-function updateChart(value) {
-  pointsHistory.push(value);
-  if (pointsHistory.length > 50) pointsHistory.shift();
+// pairs UI
+function renderPairs(){
+  pairsContainer.innerHTML='';
+  Object.entries(mockPairs).forEach(([k,v])=>{
+    const el = document.createElement('div');
+    el.className='pairBox';
+    el.innerHTML = `<div>${k}</div><div>${v.price} (${v.change})</div>`;
+    pairsContainer.appendChild(el);
+  });
+}
+function updatePairsRandom(){
+  Object.keys(mockPairs).forEach(k=>{
+    const delta = (Math.random()-0.5)*0.02;
+    mockPairs[k].price = Number((mockPairs[k].price*(1+delta)).toFixed(6));
+  });
+  renderPairs();
+}
 
-  chart.data.labels = pointsHistory.map((_, i) => i + 1);
+// chart init
+function initChart(){
+  const ctx = document.getElementById('pointsChart').getContext('2d');
+  chart = new Chart(ctx, {
+    type:'line', data:{ labels:[], datasets:[{ label:'Points', data:[], borderColor:'#59ffc9', backgroundColor:'rgba(89,255,201,0.08)'}] },
+    options:{ plugins:{legend:{display:false}}, scales:{x:{display:false}} }
+  });
+}
+function updateChart(){
+  if(!chart) return;
+  chart.data.labels = pointsHistory.map((_,i)=>i+1);
   chart.data.datasets[0].data = pointsHistory;
   chart.update();
 }
 
-// ------------------------------
-// STREAM HANDLING
-// ------------------------------
-function startStream(wallet) {
-  if (stream) stream.disconnect();
-
-  stream = new SomniaStreamAdapter({
-    wallet,
-    useMock: toggleSim.checked,
-    onPoints: (w, p) => {
-      pointsEl.textContent = p;
-      updateChart(p);
-      log(`Points update: ${p} (${w})`);
-    },
-    onEvent: (msg) => {
-      log(msg);
-      liveIndicator.textContent = "ONLINE";
-      liveIndicator.className = "indicator online";
-    },
-    onMission: (w, mission) => {
-      const li = document.createElement("li");
-      li.textContent = `${mission.name} — ${mission.time}`;
-      missionsEl.prepend(li);
+// iframe message handling (pacman)
+window.addEventListener('message', (e)=>{
+  const data = e.data || {};
+  if (data.type === 'SOMNIA_POINT_EVENT'){
+    // add to UI / stream
+    toast(`Game: +${data.points} point`);
+    // optional: forward to stream adapter points handler
+  }
+  if (data.type === 'PACMAN_RESIZE'){
+    const iframe = document.getElementById('pacman-iframe');
+    if (iframe) iframe.style.height = data.height + 'px';
+  }
+  if (data.type === 'SOMNIA_GAME_OVER'){
+    toast(`Game Over: ${data.score}`);
+    // auto submit onchain attempt (ask user)
+    if (confirm("Submit score onchain?")) {
+      submitScoreOnchain(data.score);
     }
-  });
-
-  stream.connect();
-  log("Stream started");
-}
-
-// ------------------------------
-// WALLET CONNECT
-// ------------------------------
-btnMeta.onclick = async () => {
-  const addr = await Somnia.connectWallet();
-  if (!addr) return alert("Failed to connect wallet");
-
-  walletInput.value = addr;
-  log("Wallet connected: " + addr);
-};
-
-// add + switch chain
-btnAddSomnia.onclick = async () => {
-  const ok = await Somnia.switchSomnia();
-  if (ok) log("Switched to Somnia Testnet (STT)");
-};
-
-// track wallet
-btnTrack.onclick = () => {
-  const w = walletInput.value.trim();
-  if (!w) return alert("Enter wallet address");
-
-  trackedWallet = w;
-  startStream(w);
-};
-
-// ------------------------------
-// PAC-MAN MESSAGE BRIDGE
-// ------------------------------
-window.addEventListener("message", async (ev) => {
-  if (!ev.data) return;
-
-  // hybrid point event
-  if (ev.data.type === "SOMNIA_POINT_EVENT") {
-    const current = parseInt(pointsEl.textContent || "0") + ev.data.points;
-    pointsEl.textContent = current;
-    updateChart(current);
-    log(`Pac-Man: +${ev.data.points}`);
-  }
-
-  // game over → submit on-chain
-  if (ev.data.type === "SOMNIA_GAME_OVER") {
-    log(`Submitting on-chain score: ${ev.data.score}`);
-    await window.submitScoreOnchain(ev.data.score);
-  }
-
-  // iframe resize
-  if (ev.data.type === "PACMAN_RESIZE") {
-    const iframe = document.getElementById("pacman-iframe");
-    iframe.style.height = ev.data.height + "px";
   }
 });
 
-// ------------------------------
-// INIT
-// ------------------------------
+// submit score helper
+async function submitScoreOnchain(points){
+  if (!window.Web3Somnia.connected) return alert("Connect wallet dulu.");
+  toast("Submitting score onchain...");
+  const tx = await window.Web3Somnia.submitScoreOnchain(points);
+  if (!tx) return toast("Submit failed.");
+  toast("TX sent: " + tx.hash);
+}
+
+// wire UI
+btnConnect.addEventListener('click', onConnectClicked);
+document.getElementById('btn-clear').addEventListener('click', ()=>{ activityEl.innerHTML='[cleared]'; });
+
+// initial
+renderPairs();
 initChart();
-log("DreamStream PRO+ Initialized.");
+setInterval(updatePairsRandom, 2000);
