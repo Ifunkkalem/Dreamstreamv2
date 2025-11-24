@@ -3,51 +3,76 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Pacman Hybrid — Somnia</title>
+  <title>Pacman Hybrid — DreamStream v2</title>
   <link rel="stylesheet" href="pacman.css" />
 </head>
+
 <body>
+
   <h2>DreamStream — Pac-Man Hybrid</h2>
 
-  <div>
-    <div id="addr">Not Connected</div>
+  <!-- WALLET -->
+  <div style="margin-bottom:10px;">
+      <button id="btnConnect">Connect Wallet</button>
+      <span id="addr">Not Connected</span>
   </div>
 
+  <!-- DASHBOARD TOKEN -->
+  <div id="dashboard" style="color:white; margin-bottom:12px; display:none;">
+      <div>Saldo STT: <span id="balSTT">0</span></div>
+      <div>Saldo PAC: <span id="balPAC">0</span></div>
+  </div>
+
+  <!-- LIVE PAIRS -->
+  <div id="livepairs" style="color:#59ffc9; margin-bottom:12px; display:none;">
+      <div>SOM/USD: <span id="pairSOMUSD">0.00</span></div>
+      <div>SOM/PAC: <span id="pairSOMPAC">0.00</span></div>
+      <div>PAC/USD: <span id="pairPACUSD">0.00</span></div>
+  </div>
+
+  <!-- GAME GRID -->
   <div id="grid-container"></div>
 
-  <div id="dpad">
+  <!-- D-PAD MOBILE -->
+  <div id="dpad" style="margin-top:15px;">
      <button class="dbtn" id="btn-up">▲</button>
-     <div style="display:flex; gap:10px;">
+     <div style="display:flex; gap:10px; justify-content:center;">
         <button class="dbtn" id="btn-left">◀</button>
         <button class="dbtn" id="btn-right">▶</button>
-   </div>
-        <button class="dbtn" id="btn-down">▼</button>
+     </div>
+     <button class="dbtn" id="btn-down">▼</button>
   </div>
 
+  <!-- SCORE -->
   <div style="margin-top:10px; color:white; font-size:18px;">
     Score: <span id="score">0</span>
   </div>
 
-  <div id="controls-mobile" style="display:none">
-    <div class="row">
-      <button class="ctrl-btn" data-dir="up">▲</button>
-    </div>
-    <div class="row">
-      <button class="ctrl-btn" data-dir="left">◀</button>
-      <button class="ctrl-btn" data-dir="down">⏺</button>
-      <button class="ctrl-btn" data-dir="right">▶</button>
-    </div>
+  <!-- LEADERBOARD -->
+  <div id="leaderboardBox" style="margin-top:15px; color:white;">
+        <h3>Leaderboard</h3>
+        <ul id="leaderboard"></ul>
   </div>
 
+  <!-- SWAP SCORE TO PAC -->
+  <div style="margin-top:15px;">
+      <button id="btnSwap">Swap Score → PAC</button>
+      <div id="swapStatus" style="margin-top:5px; color:#59ffc9;"></div>
+  </div>
+
+  <!-- START GAME -->
   <div style="margin-top:10px">
     <button id="start-button">Start Game (pay 0.01 STT)</button>
   </div>
 
   <div style="margin-top:12px; color:#9fb3c8" id="txStatus"></div>
 
+  
+  <!-- SCRIPTS -->
   <script src="https://cdn.jsdelivr.net/npm/ethers@5.7.2/dist/ethers.umd.min.js"></script>
   <script src="config.js"></script>
   <script src="web3.js"></script>
   <script src="pacman_hybrid.js"></script>
+
 </body>
 </html>
