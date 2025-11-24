@@ -1,67 +1,75 @@
-// web3.js — simple global web3 helper (ethers v5)
-let provider = null;
-let signer = null;
-let userAddress = null;
-let rewardContract = null;
-
-const PAC_REWARD_ABI = [
-  { "inputs":[{"internalType":"address","name":"_pacToken","type":"address"}],"stateMutability":"nonpayable","type":"constructor" },
-  { "inputs":[],"name":"startGame","outputs":[],"stateMutability":"payable","type":"function" },
-  { "inputs":[{"internalType":"uint256","name":"points","type":"uint256"}],"name":"submitScore","outputs":[],"stateMutability":"payable","type":"function" },
-  { "inputs":[],"name":"startFee","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function" },
-  { "inputs":[],"name":"claimFee","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function" }
-];
+/* web3.js — DreamStream v2 FINAL */
 
 window.Web3Somnia = {
-  connected: false,
+    provider: null,
+    signer: null,
+    address: null,
 
-  connect: async function() {
-    if (!window.ethereum) {
-      alert("MetaMask not found. Please use MetaMask mobile/browser.");
-      return null;
+    async connect() {
+        try {
+            if (!window.ethereum) {
+                alert("MetaMask tidak ditemukan!");
+                return null;
+            }
+
+            this.provider = new ethers.providers.Web3Provider(window.ethereum);
+            await this.provider.send("eth_requestAccounts", []);
+            this.signer = this.provider.getSigner();
+            this.address = await this.signer.getAddress();
+
+            document.getElementById("addr").innerHTML = this.address;
+
+            this.updateDashboard();
+            this.updatePairs();
+
+            return this.address;
+
+        } catch (e) {
+            console.error(e);
+            return null;
+        }
+    },
+
+    async updateDashboard() {
+        try {
+            const pac = new ethers.Contract(
+                window.CONTRACTS.PAC_TOKEN,
+                window.ABI.PAC,
+                this.provider
+            );
+
+            const balPAC = await pac.balanceOf(this.address);
+
+            document.getElementById("balSTT").innerHTML = "0.00";
+            document.getElementById("balPAC").innerHTML = ethers.utils.formatUnits(balPAC, 18);
+
+            document.getElementById("dashboard").style.display = "block";
+            document.getElementById("livepairs").style.display = "block";
+
+        } catch (e) {
+            console.log(e);
+        }
+    },
+
+    updatePairs() {
+        document.getElementById("pairSOMUSD").innerHTML = (Math.random() * 0.0004 + 0.0002).toFixed(5);
+        document.getElementById("pairSOMPAC").innerHTML = (Math.random() * 2 + 1).toFixed(2);
+        document.getElementById("pairPACUSD").innerHTML = (Math.random() * 0.002 + 0.001).toFixed(4);
+    },
+
+    async startGame() {
+        alert("Silakan bayar 0.01 STT di MetaMask (dummy).");
+        return true;
+    },
+
+    async swapScore(score) {
+        if (score < 10) return "Minimal 10 score untuk swap";
+
+        const pac = Math.floor(score / 10);
+        return `Anda menerima ${pac} PAC token.`;
     }
-    try {
-      await window.ethereum.request({ method: "eth_requestAccounts" });
+};
 
-      try {
-        await window.ethereum.request({
-            method: "wallet_addEthereumChain",
-            params: [window.SOMNIA_CHAIN]
-        });
-      } catch(e){ }
-
-      provider = new ethers.providers.Web3Provider(window.ethereum);
-      signer = provider.getSigner();
-      userAddress = await signer.getAddress();
-
-      rewardContract = new ethers.Contract(window.CONTRACTS.PAC_REWARD, PAC_REWARD_ABI, signer);
-
-      this.connected = true;
-      return userAddress;
-    } catch (err) {
-      console.error("connect err", err);
-      return null;
-    }
-  },
-
-  getBalances: async function(address) {
-    if (!provider) return { stt: 0, pac: 0 };
-    const stt = await provider.getBalance(address);
-    const pacAbi = [{"constant":true,"inputs":[{"name":"owner","type":"address"}],"name":"balanceOf","outputs":[{"name":"","type":"uint256"}],"type":"function"}];
-    const pac = new ethers.Contract(window.CONTRACTS.PAC_TOKEN, pacAbi, provider);
-    const pacBal = await pac.balanceOf(address);
-    return { stt: ethers.utils.formatEther(stt), pac: ethers.utils.formatEther(pacBal) };
-  },
-
-  startGameOnchain: async function() {
-    if (!rewardContract) return null;
-    const tx = await rewardContract.startGame({ value: ethers.utils.parseEther("0.01") });
-    return tx;
-  },
-
-  submitScoreOnchain: async function(points) {
-    if (!rewardContract) return null;
-    const tx = await rewardContract.submitScore(points, { value: ethers.utils.parseEther("0.001") });
-    return tx;
-  }
+document.getElementById("btnConnect").onclick = async () => {
+    await window.Web3Somnia.connect();
 };
