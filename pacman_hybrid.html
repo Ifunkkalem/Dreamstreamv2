@@ -5,54 +5,40 @@
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>Pacman Hybrid — Somnia</title>
   <link rel="stylesheet" href="pacman.css" />
-  <script src="https://cdn.jsdelivr.net/npm/ethers@5.7.2/dist/ethers.umd.min.js"></script>
-  <script src="config.js"></script>
-  <script src="web3.js"></script>
 </head>
 <body>
-  <h2>Pac-Man — Somnia Hybrid</h2>
+  <h2>DreamStream — Pac-Man Hybrid</h2>
+
   <div>
-    <button id="btnConnect">Connect Wallet</button>
-    <span id="addr">Not connected</span>
+    <div id="addr">Not Connected</div>
   </div>
 
   <div id="grid-container"></div>
-  <div style="margin-top:10px">Score: <span id="score">0</span></div>
-  <button id="start-button">Start Game</button>
 
-  <div id="controls" class="mobile-controls">
-    <button data-dir="up">▲</button>
-    <div>
-      <button data-dir="left">◀</button>
-      <button data-dir="right">▶</button>
+  <div style="margin-top:10px; color:white; font-size:18px;">
+    Score: <span id="score">0</span>
+  </div>
+
+  <div id="controls-mobile" style="display:none">
+    <div class="row">
+      <button class="ctrl-btn" data-dir="up">▲</button>
     </div>
-    <button data-dir="down">▼</button>
+    <div class="row">
+      <button class="ctrl-btn" data-dir="left">◀</button>
+      <button class="ctrl-btn" data-dir="down">⏺</button>
+      <button class="ctrl-btn" data-dir="right">▶</button>
+    </div>
   </div>
 
   <div style="margin-top:10px">
-    <button id="btnSubmit">Submit Score On-Chain</button>
-    <div id="txStatus"></div>
+    <button id="start-button">Start Game (pay 0.01 STT)</button>
   </div>
 
+  <div style="margin-top:12px; color:#9fb3c8" id="txStatus"></div>
+
+  <script src="https://cdn.jsdelivr.net/npm/ethers@5.7.2/dist/ethers.umd.min.js"></script>
+  <script src="config.js"></script>
+  <script src="web3.js"></script>
   <script src="pacman_hybrid.js"></script>
-
-  <script>
-    // connect inside iframe -> propagate to parent if parent connected
-    document.getElementById('btnConnect').onclick = async () => {
-      const addr = await window.Web3Somnia.connect();
-      if (!addr) return alert("MetaMask not found or rejected");
-      document.getElementById('addr').innerText = addr;
-      // inform parent
-      window.parent.postMessage({ type: 'IFRAME_CONNECTED', address: addr }, "*");
-    };
-
-    document.getElementById('btnSubmit').onclick = async () => {
-      const s = parseInt(document.getElementById('score').innerText || "0");
-      document.getElementById('txStatus').innerText = "Submitting...";
-      const tx = await window.Web3Somnia.submitScoreOnchain(s);
-      if (!tx) { document.getElementById('txStatus').innerText = "Failed"; return; }
-      document.getElementById('txStatus').innerText = "TX: "+tx.hash.substring(0,12)+"...";
-    };
-  </script>
 </body>
 </html>
