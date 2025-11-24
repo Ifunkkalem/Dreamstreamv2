@@ -1,4 +1,5 @@
-/* web3.js — DreamStream v2 FINAL */
+/* web3.js — DreamStream v2 FINAL FIXED */
+
 // Fix MetaMask mobile injection delay
 async function waitForEthereum() {
     return new Promise(resolve => {
@@ -21,27 +22,34 @@ window.Web3Somnia = {
 
     async connect() {
         try {
-    await waitForEthereum();
-    if (!window.ethereum) {
-        alert("MetaMask belum terdeteksi! Buka langsung dari browser MetaMask.");
-    return null;
-}
+
+            // Tunggu MetaMask inject (mobile fix)
+            await waitForEthereum();
+
+            if (!window.ethereum) {
+                alert("MetaMask tidak terdeteksi! Buka lewat browser MetaMask.");
+                return null;
             }
 
+            // Connect ke MetaMask
             this.provider = new ethers.providers.Web3Provider(window.ethereum);
             await this.provider.send("eth_requestAccounts", []);
             this.signer = this.provider.getSigner();
             this.address = await this.signer.getAddress();
 
-            document.getElementById("addr").innerHTML = this.address;
+            // Update UI address
+            const addrBox = document.getElementById("addr");
+            if (addrBox) addrBox.innerHTML = this.address;
 
+            // Dashboard + Live Pair
             this.updateDashboard();
             this.updatePairs();
 
             return this.address;
 
         } catch (e) {
-            console.error(e);
+            console.error("Connect error:", e);
+            alert("MetaMask error: Rejected / not found.");
             return null;
         }
     },
@@ -56,21 +64,31 @@ window.Web3Somnia = {
 
             const balPAC = await pac.balanceOf(this.address);
 
-            document.getElementById("balSTT").innerHTML = "0.00";
-            document.getElementById("balPAC").innerHTML = ethers.utils.formatUnits(balPAC, 18);
+            const sttBox = document.getElementById("balSTT");
+            const pacBox = document.getElementById("balPAC");
 
-            document.getElementById("dashboard").style.display = "block";
-            document.getElementById("livepairs").style.display = "block";
+            if (sttBox) sttBox.innerHTML = "0.00";            // STT dummy
+            if (pacBox) pacBox.innerHTML = ethers.utils.formatUnits(balPAC, 18);
+
+            const dash = document.getElementById("dashboard");
+            if (dash) dash.style.display = "block";
+
+            const pairs = document.getElementById("livepairs");
+            if (pairs) pairs.style.display = "block";
 
         } catch (e) {
-            console.log(e);
+            console.log("Dashboard error:", e);
         }
     },
 
     updatePairs() {
-        document.getElementById("pairSOMUSD").innerHTML = (Math.random() * 0.0004 + 0.0002).toFixed(5);
-        document.getElementById("pairSOMPAC").innerHTML = (Math.random() * 2 + 1).toFixed(2);
-        document.getElementById("pairPACUSD").innerHTML = (Math.random() * 0.002 + 0.001).toFixed(4);
+        const somusd = document.getElementById("pairSOMUSD");
+        const sompac = document.getElementById("pairSOMPAC");
+        const pacusd = document.getElementById("pairPACUSD");
+
+        if (somusd) somusd.innerHTML = (Math.random() * 0.0004 + 0.0002).toFixed(5);
+        if (sompac) sompac.innerHTML = (Math.random() * 2 + 1).toFixed(2);
+        if (pacusd) pacusd.innerHTML = (Math.random() * 0.002 + 0.001).toFixed(4);
     },
 
     async startGame() {
@@ -80,12 +98,15 @@ window.Web3Somnia = {
 
     async swapScore(score) {
         if (score < 10) return "Minimal 10 score untuk swap";
-
         const pac = Math.floor(score / 10);
         return `Anda menerima ${pac} PAC token.`;
     }
 };
 
-document.getElementById("btnConnect").onclick = async () => {
-    await window.Web3Somnia.connect();
-};
+// Assign connect button
+const btn = document.getElementById("btnConnect");
+if (btn) {
+    btn.onclick = async () => {
+        await window.Web3Somnia.connect();
+    };
+}
