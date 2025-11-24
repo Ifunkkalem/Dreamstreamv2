@@ -21,16 +21,14 @@ window.Web3Somnia = {
       return null;
     }
     try {
-      // request accounts
       await window.ethereum.request({ method: "eth_requestAccounts" });
 
-      // ensure chain - ask add/switch
       try {
         await window.ethereum.request({
             method: "wallet_addEthereumChain",
             params: [window.SOMNIA_CHAIN]
         });
-      } catch(e){ /* ignore if user already on chain or extension doesn't support */ }
+      } catch(e){ }
 
       provider = new ethers.providers.Web3Provider(window.ethereum);
       signer = provider.getSigner();
@@ -49,7 +47,6 @@ window.Web3Somnia = {
   getBalances: async function(address) {
     if (!provider) return { stt: 0, pac: 0 };
     const stt = await provider.getBalance(address);
-    // PAC token ABI minimal balanceOf
     const pacAbi = [{"constant":true,"inputs":[{"name":"owner","type":"address"}],"name":"balanceOf","outputs":[{"name":"","type":"uint256"}],"type":"function"}];
     const pac = new ethers.Contract(window.CONTRACTS.PAC_TOKEN, pacAbi, provider);
     const pacBal = await pac.balanceOf(address);
