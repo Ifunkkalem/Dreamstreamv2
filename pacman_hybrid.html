@@ -1,69 +1,58 @@
 <!doctype html>
-<html lang="en">
+<html lang="id">
 <head>
-<meta charset="utf-8" />
-<title>Pacman Hybrid — Somnia Edition</title>
-<meta name="viewport" content="width=device-width, initial-scale=1.0" />
-
-<link rel="stylesheet" href="pacman.css" />
-<script src="https://cdn.jsdelivr.net/npm/ethers@5.7.2/dist/ethers.umd.min.js"></script>
-<script src="config.js"></script>
-<script src="web3.js"></script>
-<script src="pacman_hybrid.js"></script>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Pacman Hybrid — Somnia</title>
+  <link rel="stylesheet" href="pacman.css" />
+  <script src="https://cdn.jsdelivr.net/npm/ethers@5.7.2/dist/ethers.umd.min.js"></script>
+  <script src="config.js"></script>
+  <script src="web3.js"></script>
 </head>
+<body>
+  <h2>Pac-Man — Somnia Hybrid</h2>
+  <div>
+    <button id="btnConnect">Connect Wallet</button>
+    <span id="addr">Not connected</span>
+  </div>
 
-<body style="background:#05060b; padding:10px;">
+  <div id="grid-container"></div>
+  <div style="margin-top:10px">Score: <span id="score">0</span></div>
+  <button id="start-button">Start Game</button>
 
-<h2 style="color:#59ffc9; font-family:Arial; margin-bottom:10px;">
-    DreamStream — Pac-Man Hybrid
-</h2>
+  <div id="controls" class="mobile-controls">
+    <button data-dir="up">▲</button>
+    <div>
+      <button data-dir="left">◀</button>
+      <button data-dir="right">▶</button>
+    </div>
+    <button data-dir="down">▼</button>
+  </div>
 
-<div>Wallet: <span id="addr" style="color:white;">Not Connected</span></div>
+  <div style="margin-top:10px">
+    <button id="btnSubmit">Submit Score On-Chain</button>
+    <div id="txStatus"></div>
+  </div>
 
-<div id="grid-container"></div>
-<div>Score: <span id="score">0</span></div>
+  <script src="pacman_hybrid.js"></script>
 
-<button id="start-button"
-    style="margin-top:10px; padding:8px 14px; background:#59ffc9; border:none; color:#000;">
-    Start Game
-</button>
+  <script>
+    // connect inside iframe -> propagate to parent if parent connected
+    document.getElementById('btnConnect').onclick = async () => {
+      const addr = await window.Web3Somnia.connect();
+      if (!addr) return alert("MetaMask not found or rejected");
+      document.getElementById('addr').innerText = addr;
+      // inform parent
+      window.parent.postMessage({ type: 'IFRAME_CONNECTED', address: addr }, "*");
+    };
 
-<div id="mobile-controls">
-    <button class="control-btn" data-dir="up">▲</button>
-    <button class="control-btn" data-dir="left">◄</button>
-    <button class="control-btn" data-dir="down">▼</button>
-    <button class="control-btn" data-dir="right">►</button>
-</div>
-
-<script>
-// Terima alamat wallet dari parent (index.html)
-let walletAddress = null;
-window.addEventListener('message', (event) => {
-    if (event.data.type === 'walletConnected') {
-        walletAddress = event.data.address;
-        document.getElementById("addr").innerText = walletAddress;
-    }
-});
-
-// Start Game pakai wallet dari index.html
-document.getElementById("start-button").onclick = async () => {
-    if (!walletAddress) return alert("Please connect wallet first!");
-    const tx = await window.Web3Somnia.start(walletAddress);
-    if (!tx) return alert("Start game failed!");
-    alert("Game started on-chain!");
-};
-
-// Tombol arah mobile
-document.querySelectorAll('.control-btn').forEach(btn => {
-    btn.addEventListener('touchstart', () => movePacMan(btn.dataset.dir));
-    btn.addEventListener('mousedown', () => movePacMan(btn.dataset.dir));
-});
-
-// Fungsi gerak karakter
-function movePacMan(direction) {
-    console.log("Move Pac-Man:", direction);
-}
-</script>
-
+    document.getElementById('btnSubmit').onclick = async () => {
+      const s = parseInt(document.getElementById('score').innerText || "0");
+      document.getElementById('txStatus').innerText = "Submitting...";
+      const tx = await window.Web3Somnia.submitScoreOnchain(s);
+      if (!tx) { document.getElementById('txStatus').innerText = "Failed"; return; }
+      document.getElementById('txStatus').innerText = "TX: "+tx.hash.substring(0,12)+"...";
+    };
+  </script>
 </body>
 </html>
