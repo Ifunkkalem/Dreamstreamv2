@@ -1,8 +1,8 @@
+// pacman_hybrid.js
 const gridContainer = document.getElementById('grid-container');
 const scoreDisplay = document.getElementById('score');
-const statusMessage = document.getElementById('txStatus');
 const startBtn = document.getElementById('start-button');
-const controls = document.getElementById('controls');
+const controls = document.getElementById('controls-mobile');
 
 const width = 20;
 let squares = [];
@@ -11,6 +11,7 @@ let pacIndex = 301;
 let ghostIndex = 191;
 let running = false;
 let ghostInterval = null;
+let initialDots = [];
 
 const layout = [
   1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,
@@ -43,8 +44,24 @@ function createGrid(){
     if (layout[i]===2) sq.classList.add('dot');
     gridContainer.appendChild(sq); squares.push(sq);
   }
+  initialDots = squares.map(s=> s.classList.contains('dot'));
+  pacIndex = 301;
+  ghostIndex = 191;
   squares[pacIndex].classList.add('pac-man');
   squares[ghostIndex].classList.add('ghost');
+}
+
+function resetGameState(){
+  for(let i=0;i<squares.length;i++){
+    squares[i].classList.remove('pac-man','ghost');
+    if(initialDots[i]) squares[i].classList.add('dot'); else squares[i].classList.remove('dot');
+  }
+  pacIndex = 301; ghostIndex = 191; score = 0;
+  scoreDisplay.textContent = score;
+  squares[pacIndex].classList.add('pac-man');
+  squares[ghostIndex].classList.add('ghost');
+  running = false;
+  if(ghostInterval) clearInterval(ghostInterval);
 }
 
 function collectDot(){
@@ -102,21 +119,16 @@ function ghostMove(){
 
 function checkGameOver(){
   if(pacIndex===ghostIndex){
-    running=false; clearInterval(ghostInterval);
-    alert("GAME OVER! Score: "+score);
     window.parent.postMessage({ type:'SOMNIA_GAME_OVER', score }, "*");
+    resetGameState();
   }
 }
 
 startBtn.onclick = async () => {
   if (running) return;
-  // trigger onchain startFee
   try {
     const tx = await window.Web3Somnia.startGameOnchain();
-    if (tx) {
-      await tx.wait();
-      // play after mined
-    }
+    if (tx) await tx.wait();
   } catch(e){
     alert("Start failed or rejected.");
     console.error(e);
