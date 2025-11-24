@@ -1,38 +1,16 @@
-// config.js — Somnia Testnet Official Configuration (FINAL)
-
-// RPC resmi
+// config.js - Somnia testnet config & contracts
 window.SOMNIA_RPC = "https://dream-rpc.somnia.network";
 
-// Chain detail resmi Somnia Testnet
 window.SOMNIA_CHAIN = {
-    chainId: "0xC488", // 50312 (hex)
+    chainId: "0xC488", // 50312
     chainName: "Somnia Testnet",
-    nativeCurrency: {
-        name: "Somnia Test Token",
-        symbol: "STT",
-        decimals: 18
-    },
+    nativeCurrency: { name: "Somnia Test Token", symbol: "STT", decimals: 18 },
     rpcUrls: ["https://dream-rpc.somnia.network"],
-    blockExplorerUrls: ["https://testnet.somnia.network/"]
+    blockExplorerUrls: ["https://shannon-explorer.somnia.network/"]
 };
 
-// Smart contract scoring (contoh token/logic kamu)
-window.SOMNIA_CONTRACT = {
-    address: "0xDb706daF3C2e5B657d02f69841b4323958507de7", // Replace if needed
-    abi: [
-        {
-            "inputs": [],
-            "name": "submitScore",
-            "outputs": [],
-            "stateMutability": "payable",
-            "type": "function"
-        },
-        {
-            "inputs": [{"internalType":"address","name":"user","type":"address"}],
-            "name": "getScore",
-            "outputs": [{"internalType":"uint256","name":"","type":"uint256"}],
-            "stateMutability": "view",
-            "type": "function"
-        }
-    ]
+// Contracts - gunakan alamat yang sudah kamu deploy
+window.CONTRACTS = {
+    PAC_TOKEN: "0xf0993eb1fE7a5368778c4B5a8aE52c0fd503E7c9",   // PAC token
+    PAC_REWARD: "0x3fcb2265EE7d8d854c8a1e5BCc6d0c16d90E88e1"  // PacmanReward
 };
