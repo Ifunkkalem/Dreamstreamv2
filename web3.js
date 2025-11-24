@@ -1,4 +1,18 @@
 /* web3.js — DreamStream v2 FINAL */
+// Fix MetaMask mobile injection delay
+async function waitForEthereum() {
+    return new Promise(resolve => {
+        if (window.ethereum) return resolve(window.ethereum);
+        let tries = 0;
+        const interval = setInterval(() => {
+            if (window.ethereum || tries > 20) {
+                clearInterval(interval);
+                resolve(window.ethereum);
+            }
+            tries++;
+        }, 150);
+    });
+}
 
 window.Web3Somnia = {
     provider: null,
@@ -7,9 +21,11 @@ window.Web3Somnia = {
 
     async connect() {
         try {
-            if (!window.ethereum) {
-                alert("MetaMask tidak ditemukan!");
-                return null;
+    await waitForEthereum();
+    if (!window.ethereum) {
+        alert("MetaMask belum terdeteksi! Buka langsung dari browser MetaMask.");
+    return null;
+}
             }
 
             this.provider = new ethers.providers.Web3Provider(window.ethereum);
