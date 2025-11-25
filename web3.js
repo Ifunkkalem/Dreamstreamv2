@@ -1,4 +1,4 @@
-/* web3.js — DreamStream v2 FINAL (STT native) */
+/* web3.js — DreamStream v2 SUPER FINAL (Fully Fixed) */
 
 async function waitForEthereum() {
   return new Promise((resolve) => {
@@ -23,7 +23,7 @@ window.Web3Somnia = {
     try {
       await waitForEthereum();
       if (!window.ethereum) {
-        alert("MetaMask tidak terdeteksi! Buka lewat browser MetaMask.");
+        alert("MetaMask tidak terdeteksi! Gunakan browser MetaMask.");
         return null;
       }
 
@@ -32,67 +32,84 @@ window.Web3Somnia = {
       this.signer = this.provider.getSigner();
       this.address = await this.signer.getAddress();
 
-      document.getElementById("addr").innerText = this.address;
+      // FIX: elemen DreamStreamv2
+      document.getElementById("addr-display").innerText = this.address;
 
-      this.updateDashboard();
+      document.getElementById("stream-status").innerText = "CONNECTED";
+      document.getElementById("live-indicator").classList.remove("offline");
+      document.getElementById("live-indicator").classList.add("online");
+      document.getElementById("live-indicator").innerText = "ONLINE";
+
+      this.updateBalances();
       this.updatePairs();
 
       return this.address;
+
     } catch (e) {
-      console.error("Connect error:", e);
+      console.error(e);
       alert("Gagal connect MetaMask.");
       return null;
     }
   },
 
-  async updateDashboard() {
+  async updateBalances() {
     try {
+      // Load PAC token
       const pac = new ethers.Contract(
         window.CONTRACTS.PAC_TOKEN,
         window.ABI.PAC,
         this.provider
       );
+
+      const balSTT = await this.provider.getBalance(this.address);
       const balPAC = await pac.balanceOf(this.address);
 
-      document.getElementById("balSTT").innerText = await this.provider.getBalance(this.address).then(b => ethers.utils.formatEther(b));
-      document.getElementById("balPAC").innerText = ethers.utils.formatUnits(balPAC, 18);
+      // FIX: elemen DreamStreamv2
+      document.getElementById("balance-stt").innerText =
+        Number(ethers.utils.formatEther(balSTT)).toFixed(4);
 
-      document.getElementById("dashboard").style.display = "block";
-      document.getElementById("livepairs").style.display = "block";
+      document.getElementById("balance-pac").innerText =
+        Number(ethers.utils.formatUnits(balPAC, 18)).toFixed(4);
+
     } catch (e) {
-      console.error("Dashboard error:", e);
+      console.log("updateBalances error:", e);
     }
   },
 
   updatePairs() {
-    document.getElementById("pairSOMUSD").innerText = (Math.random() * 0.0004 + 0.0002).toFixed(5);
-    document.getElementById("pairSOMPAC").innerText = (Math.random() * 2 + 1).toFixed(2);
-    document.getElementById("pairPACUSD").innerText = (Math.random() * 0.002 + 0.001).toFixed(4);
+    // FIX: list container DreamStreamv2
+    const pairs = `
+      SOM/USD : ${(Math.random() * 0.0004 + 0.0002).toFixed(5)}<br>
+      SOM/PAC : ${(Math.random() * 2 + 1).toFixed(2)}<br>
+      PAC/USD : ${(Math.random() * 0.002 + 0.001).toFixed(4)}
+    `;
+    document.getElementById("pairs").innerHTML = pairs;
   },
 
   async startGame() {
+    // clean + compatible with pacman_hybrid.js
     try {
       const tx = await this.signer.sendTransaction({
-        to: this.address, // dummy: kirim ke diri sendiri sebagai simulasi
+        to: this.address,
         value: ethers.utils.parseEther("0.01")
       });
       await tx.wait();
       return true;
     } catch (e) {
-      console.error("startGame tx error:", e);
-      alert("Transaksi gagal saat start game.");
+      alert("Transaksi start game gagal.");
       return false;
     }
   },
 
   async swapScore(score) {
-    if (score < 10) return "Skor minimal 10 untuk swap.";
+    if (score < 10) return "Minimal 10 skor untuk swap.";
+
     const pac = Math.floor(score / 10);
-    // simulasi swap tanpa kontrak onchain
-    return `Anda menerima ${pac} PAC (simulasi).`;
+    return `Swap berhasil! Anda menerima ${pac} PAC (simulasi).`;
   }
 };
 
-document.getElementById("btnConnect").onclick = async () => {
+/* FIX tombol connect DreamStreamv2 */
+document.getElementById("btn-connect").onclick = async () => {
   await window.Web3Somnia.connect();
 };
